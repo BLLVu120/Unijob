@@ -13,11 +13,8 @@ class CompanyVerifier:
     def __init__(self):
         """
         Initialize CompanyVerifier
-        
-        Args:
-            google_maps_api_key: API key of Google Maps (optional)
         """
-        self.mst_api_url = "https://api.vietqr.io/v2/business/"
+        self.mst_api_url = os.getenv('TAX_CODE_ENDPOINT')
     
     
     def verify_tax_code(self, tax_code: str) -> Dict[str, Any]:
