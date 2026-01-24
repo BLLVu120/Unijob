@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực Email</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7fa;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .header .icon {
+            font-size: 64px;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            font-size: 15px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+        
+        .otp-container {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 8px;
+            padding: 25px;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+        }
+        
+        .otp-label {
+            color: white;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .otp-code {
+            font-size: 42px;
+            font-weight: bold;
+            color: white;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .otp-expiry {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        
+        .info-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 4px;
+        }
+        
+        .info-box h3 {
+            color: #667eea;
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .info-box h3:before {
+            content: "ℹ️";
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .info-box li {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+            padding-left: 24px;
+            position: relative;
+        }
+        
+        .info-box li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .warning-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 25px 0;
+            border-radius: 4px;
+        }
+        
+        .warning-box p {
+            color: #856404;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .warning-box strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 15px;
+        }
+        
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .verify-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.3s ease;
+        }
+        
+        .verify-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e0e0e0, transparent);
+            margin: 30px 0;
+        }
+        
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .footer-text {
+            color: #999;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        
+        .company-info {
+            color: #666;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        
+        .company-name {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .social-links {
+            margin-top: 20px;
+        }
+        
+        .social-links a {
+            display: inline-block;
+            margin: 0 8px;
+            color: #999;
+            text-decoration: none;
+            font-size: 20px;
+            transition: color 0.3s ease;
+        }
+        
+        .social-links a:hover {
+            color: #667eea;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                border-radius: 0;
+            }
+            
+            .header, .content, .footer {
+                padding: 25px 20px;
+            }
+            
+            .otp-code {
+                font-size: 32px;
+                letter-spacing: 5px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="icon">🔐</div>
+            <h1>Xác Thực Email</h1>
+            <p style="margin: 0; opacity: 0.9;">Verification Required</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            
+            <p class="message">
+                Chúng tôi đã nhận được yêu cầu xác thực email của bạn. Để hoàn tất quá trình xác thực, 
+                vui lòng sử dụng mã OTP bên dưới:
+            </p>
+            
+            <!-- OTP Box -->
+            <div class="otp-container">
+                <div class="otp-label">Mã xác thực OTP</div>
+                <div class="otp-code">828131</div>
+                <div class="otp-expiry">⏱️ Có hiệu lực trong 5 phút</div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Info Box -->
+            <div class="info-box">
+                <h3>Lưu ý quan trọng:</h3>
+                <ul>
+                    <li>Mã OTP chỉ có hiệu lực trong <strong>5 phút</strong></li>
+                    <li>Mỗi mã chỉ được sử dụng <strong>một lần duy nhất</strong></li>
+                    <li>Bạn có tối đa <strong>3 lần</strong> nhập sai</li>
+                    <li>Không chia sẻ mã này với bất kỳ ai</li>
+                </ul>
+            </div>
+            
+            <!-- Warning Box -->
+            <div class="warning-box">
+                <p>
+                    <strong>⚠️ Cảnh báo bảo mật</strong>
+                    Nếu bạn không yêu cầu xác thực này, vui lòng bỏ qua email này và 
+                    liên hệ với chúng tôi ngay lập tức để được hỗ trợ.
+                </p>
+            </div>
+            
+            <p class="message" style="margin-top: 30px; font-size: 14px; color: #999;">
+                Email này được gửi tự động, vui lòng không trả lời trực tiếp. 
+                Nếu cần hỗ trợ, vui lòng liên hệ với chúng tôi qua website hoặc hotline.
+            </p>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="company-name">🏢 Company Verification System</div>
+            <div class="company-info">
+                Hệ thống xác thực công ty tự động<br>
+                Email: unijobsupport@exe201.vn<br>
+                Hotline: 1900-1811
+            </div>
+            
+            <div class="divider" style="margin: 20px 40px;"></div>
+            
+            <div class="social-links">
+                <a href="#" title="Facebook">📘</a>
+                <a href="#" title="Twitter">🐦</a>
+                <a href="#" title="LinkedIn">💼</a>
+                <a href="#" title="Website">🌐</a>
+            </div>
+            
+            <p class="footer-text" style="margin-top: 20px;">
+                © 2026 Company Verification System. All rights reserved.<br>
+                Địa chỉ: Hồ Chí Minh, Việt Nam
+            </p>
+            
+            <p class="footer-text" style="font-size: 11px; margin-top: 15px;">
+                Bạn nhận được email này vì đã đăng ký sử dụng dịch vụ của chúng tôi.<br>
+                <a href="#" style="color: #667eea; text-decoration: none;">Hủy đăng ký</a> | 
+                <a href="#" style="color: #667eea; text-decoration: none;">Chính sách bảo mật</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
