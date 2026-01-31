@@ -28,15 +28,13 @@ class DB:
                 result = connection.execute(text("SELECT 1"))
                 result.fetchone()
             
-            print("✓ Kết nối thành công với PostgreSQL (SQLAlchemy)")
             return {
                 "engine": engine,
                 "status": True,
             }
             
         except Exception as error:
-            {
+            return {
                 "status": False,
                 "error": str(error)
             }
-            return None
