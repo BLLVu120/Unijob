@@ -21,7 +21,7 @@ class DB:
             connection_string = f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
             
             # Tạo engine
-            engine = create_engine(connection_string)
+            engine = create_engine(connection_string, future=True)
             
             # Test connection
             with engine.connect() as connection:
@@ -33,6 +33,18 @@ class DB:
                 "status": True,
             }
             
+        except Exception as error:
+            return {
+                "status": False,
+                "error": str(error)
+            }
+    def disconnect(self, engine):
+        """Close the database connection"""
+        try:
+            engine.dispose()
+            return {
+                "status": True,
+            }
         except Exception as error:
             return {
                 "status": False,
