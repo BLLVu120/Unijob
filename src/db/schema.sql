@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS candidates (
     candidate_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name VARCHAR(255) NOT NULL,
-    dob DATE,
+    dob DATE NOT NULL,
     gender VARCHAR(10),
     email VARCHAR(255) UNIQUE NOT NULL,
     phone_number VARCHAR(20) UNIQUE NOT NULL,
@@ -107,21 +107,3 @@ CREATE TABLE IF NOT EXISTS blacklists (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (entity_id) REFERENCES employers(emp_id) ON DELETE CASCADE
 );
-
--- Create Indexes
-CREATE INDEX IF NOT EXISTS idx_candidates_email ON candidates(email);
-CREATE INDEX IF NOT EXISTS idx_candidates_cid ON candidates(cid);
-CREATE INDEX IF NOT EXISTS idx_employers_email ON employers(email);
-CREATE INDEX IF NOT EXISTS idx_employers_cid ON employers(cid);
-CREATE INDEX IF NOT EXISTS idx_posts_employer_id ON posts(employer_id);
-CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
-CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications(job_id);
-CREATE INDEX IF NOT EXISTS idx_applications_candidate_id ON applications(candidate_id);
-CREATE INDEX IF NOT EXISTS idx_interviews_job_id ON interviews(job_id);
-CREATE INDEX IF NOT EXISTS idx_interviews_emp_id ON interviews(emp_id);
-CREATE INDEX IF NOT EXISTS idx_interviews_candidate_id ON interviews(candidate_id);
-CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
-CREATE INDEX IF NOT EXISTS idx_messages_receiver_id ON messages(receiver_id);
-CREATE INDEX IF NOT EXISTS idx_feedbacks_job_id ON feedbacks(job_id);
-CREATE INDEX IF NOT EXISTS idx_feedbacks_emp_id ON feedbacks(emp_id);
-CREATE INDEX IF NOT EXISTS idx_blacklists_entity_id ON blacklists(entity_id);
