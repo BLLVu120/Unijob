@@ -22,3 +22,19 @@ Dự án sử dụng kiến trúc microservices với Docker, bao gồm backend 
 Giải quyết an ninh lao động trực tuyến, đặc biệt ở các nước đang phát triển. Giáo dục người dùng về quyền lợi và kỹ năng phỏng vấn.
 
 Để bắt đầu: Clone repo, chạy `docker-compose up`, tham khảo docs/.
+
+## Run API
+1. git clone
+2. cd unijob
+3. Conda environment:
+    > conda create -n unijob python=3.10.18
+    > conda activate unijob
+4. Install dependencies:
+    > pip install -r requirements.txt
+5. Build và chạy Docker Compose:
+    > docker compose up -d
+6. Access src/
+   > cd src/
+7. Run API
+    > python -m api.v1
+8. Access API tại http://localhost:8000/docs
