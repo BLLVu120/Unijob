@@ -1,65 +1,32 @@
 import os
 from sqlalchemy.engine import Engine
-from sqlalchemy import (
-    create_engine,
-    MetaData,
-    Table,
-    Column,
-    Integer,
-    String,
-    select,
-    exists,
-    delete,
-    text,
-    update
-)
+from sqlalchemy import text
 
-metadata = MetaData()
-
-candidates = Table(
-    "candidates",
-    metadata,
-    Column("id", Integer, primary_key=True),
-    Column("email", String, nullable=False, unique=True),
-    Column("name", String, nullable=False),
-)
-
-
-def candidate_exists(engine: Engine, email: str) -> dict:
+def get_candidate_by_email(engine, email: str) -> dict:
+    """Retrieve a candidate by email from the database."""
     try:
-        stmt = select(
-            exists().where(candidates.c.email == email)
-        )
-
         with engine.connect() as conn:
-            result = conn.execute(stmt).scalar()
+            query = text("SELECT * FROM candidates WHERE email = :email")
+            result = conn.execute(query, {"email": email})
 
-        return {
-            "status": True,
-            "exists": bool(result)
-        }
+            row = result.fetchone()
+
+            if row is not None:
+                return {
+                    "status": True,
+                    "candidate": dict(row._mapping)
+                }
+            else:
+                return {
+                    "status": True,
+                    "candidate": []
+                }
 
     except Exception as error:
         return {
             "status": False,
             "error": str(error)
         }
-
-def get_all_candidates(engine):
-    """Retrieve all candidates from the database."""
-    try:
-        with engine.connect() as connection:
-            query = text("SELECT * FROM candidates")
-            result = connection.execute(query)
-            return {
-                "status": True,
-                "candidates": result.fetchall()
-            }
-    except Exception as error:
-        print(f"Error retrieving candidates: {error}")
-        return {
-            "status": False,
-            "error": str(error)}
 
 def add_new_candidate(engine, candidate_data: dict) -> dict:
     """Add a new candidate to the database."""
@@ -74,14 +41,12 @@ def add_new_candidate(engine, candidate_data: dict) -> dict:
                 }
         
         with engine.begin() as connection:
-
-            
             # Insert new candidate
             query = text("""
                 INSERT INTO candidates 
-                (full_name, dob, gender, email, password, phone_number, address, cid)
+                (full_name, dob, gender, email, password, phone_number, address, cid,linkedin_link)
                 VALUES 
-                (:full_name, :dob, :gender, :email, :password, :phone_number, :address, :cid)
+                (:full_name, :dob, :gender, :email, :password, :phone_number, :address, :cid, :linkedin_link)
             """)
             
             stmt = connection.execute(query, candidate_data)
@@ -91,31 +56,6 @@ def add_new_candidate(engine, candidate_data: dict) -> dict:
                 "message": "Candidate added successfully",
             }
             
-    except Exception as error:
-        return {
-            "status": False,
-            "error": str(error)
-        }
-def delete_candidate(engine: Engine, email: str) -> dict:
-    try:
-        stmt = delete(candidates).where(
-            candidates.c.email == email
-        )
-
-        with engine.begin() as conn:
-            result = conn.execute(stmt)
-
-        if result.rowcount == 0:
-            return {
-                "status": True,
-                "message": "No candidate found with this email"
-            }
-
-        return {
-            "status": True,
-            "message": f"Candidate with email {email} deleted successfully"
-        }
-
     except Exception as error:
         return {
             "status": False,
