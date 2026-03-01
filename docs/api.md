@@ -9,10 +9,13 @@
 - [x] update_employer()
 
 ## Job
-- [ ] search_job()
+- [x] search_job()
+- [x] add_job()
+- [x] delete_job()
+- [x] update_job()
 
 ## Feedback
-- [ ] add_feedback()
+- [x] add_feedback()
 - [ ] get_feedback_by_employer_id()
 
 ## Blacklist
@@ -29,3 +32,9 @@
 - [ ] get_messages_by_candidate_id()
 - [ ] get_messages_by_employer_id()
 - [ ] add_message()
+
+## Admin
+- [x] get_all_candidates()
+- [x] delete_candidate()
+- [x] get_all_employers()
+- [x] get_all_jobs()
