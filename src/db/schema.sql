@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS employers (
 CREATE TABLE IF NOT EXISTS jobs (
     job_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employer_id UUID NOT NULL,
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(255) UNIQUE NOT NULL,
     description TEXT,
     requirements TEXT,
     benefits TEXT,
@@ -93,7 +93,8 @@ CREATE TABLE IF NOT EXISTS feedbacks (
     feedback_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL,
     emp_id UUID NOT NULL,
-    rate DECIMAL(3, 2),
+    candidate_id UUID NOT NULL,
+    rate INT CHECK (rate >= 1 AND rate <= 5),
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE,
