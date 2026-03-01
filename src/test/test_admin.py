@@ -1,4 +1,4 @@
-from db.admin import get_all_candidates,delete_candidate,get_all_employers
+from db.admin import get_all_candidates,delete_candidate,get_all_employers, get_all_jobs
 from db.connection import DB
 def test_get_all_candidates():
     db = DB()
@@ -29,7 +29,17 @@ def test_get_all_employers():
         print(employer)
     assert stmt["status"] is True
 
+def test_get_all_jobs():
+    db = DB()
+    connection = db.connect()
+    engine = connection["engine"]
+    
+    stmt = get_all_jobs(engine)
+    print(stmt)
+    # assert stmt["status"] is True
+
 if __name__ == "__main__":
     # test_get_all_candidates()
     # test_delete_candidate()
-    test_get_all_employers()
+    # test_get_all_employers()
+    test_get_all_jobs()
