@@ -24,8 +24,10 @@ Giải quyết an ninh lao động trực tuyến, đặc biệt ở các nướ
 Để bắt đầu: Clone repo, chạy `docker-compose up`, tham khảo docs/.
 
 ## Run API
-1. git clone
-2. cd unijob
+1. Clone repository:
+    > git clone
+2. Access project directory:
+   > cd unijob
 3. Conda environment:
     > conda create -n unijob python=3.10.18
     > conda activate unijob
