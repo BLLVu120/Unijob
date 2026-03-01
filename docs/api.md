@@ -14,9 +14,14 @@
 - [x] delete_job()
 - [x] update_job()
 
+## Application
+- [ ] apply_to_job()
+- [ ] get_applications_by_candidate_id()
+- [ ] get_applications_by_employer_id()
+
 ## Feedback
 - [x] add_feedback()
-- [ ] get_feedback_by_employer_id()
+- [x] get_feedback_by_employer_id()
 
 ## Blacklist
 - [ ] add_to_blacklist()
