@@ -30,6 +30,7 @@ Giải quyết an ninh lao động trực tuyến, đặc biệt ở các nướ
    > cd unijob
 3. Conda environment:
     > conda create -n unijob python=3.10.18
+    
     > conda activate unijob
 4. Install dependencies:
     > pip install -r requirements.txt
@@ -39,7 +40,7 @@ Giải quyết an ninh lao động trực tuyến, đặc biệt ở các nướ
    > cd src/
 7. Run API
     > python -m api.v1
-8. Access API tại http://localhost:8000/docs
+8. Access API tại http://0.0.0.0:8000/docs
 
 ## DB Management
 1. Run Docker Compose:
@@ -47,9 +48,10 @@ Giải quyết an ninh lao động trực tuyến, đặc biệt ở các nướ
 2. Access link pgAdmin tại http://localhost:5050
 3. Login với email:
 4. Register Server với:
-   - Name: unijob_db
-   - Host: db
-   - Port: 5432
-   - Username: postgres
-   - Password: password
+   - Name: unijob
+   - Host name/address: postgres
+   - Port: 5432 
+   - Maintenance database: unijob_db
+   - Username: unijob_user
+   - Password: unijob_password
 5. Quản lý database unijob_db qua pgAdmin
