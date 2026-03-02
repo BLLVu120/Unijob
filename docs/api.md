@@ -23,10 +23,6 @@
 - [x] add_feedback()
 - [x] get_feedback_by_employer_id()
 
-## Blacklist
-- [ ] add_to_blacklist()
-- [ ] check_()
-
 ## Interview
 - [ ] get_interview_by_candidate_id()
 - [ ] get_interview_by_employer_id()
