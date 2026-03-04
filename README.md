@@ -36,11 +36,20 @@ Giải quyết an ninh lao động trực tuyến, đặc biệt ở các nướ
     > pip install -r requirements.txt
 5. Build và chạy Docker Compose:
     > docker compose up -d
-6. Access src/
+6. Fill information .env file
+
+| Biến        | Kiểu dữ liệu | Mô tả                                            | Ví dụ           |
+| ----------- | ------------ | ------------------------------------------------ | --------------- |
+| DB_HOST     | string       | Địa chỉ server database                          | localhost       |
+| DB_PORT     | integer      | Cổng kết nối database (PostgreSQL mặc định 5432) | 5432            |
+| DB_NAME     | string       | Tên database sẽ sử dụng                          | unijob_db       |
+| DB_USER     | string       | Username dùng để kết nối database                | unijob_user     |
+| DB_PASSWORD | string       | Mật khẩu của database user                       | unijob_password |
+7. Access src/
    > cd src/
-7. Run API
+8. Run API
     > python -m api.v1
-8. Access API tại http://0.0.0.0:8000/docs
+9.  Access API tại http://0.0.0.0:8000/docs
 
 ## DB Management
 1. Run Docker Compose:
