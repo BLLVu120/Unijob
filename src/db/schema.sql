@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS candidates (
     phone_number VARCHAR(20) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     address TEXT NOT NULL,
-    cid VARCHAR(50),
-    linkedin_link VARCHAR(255),
+    cid VARCHAR(50) NOT NULL,
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -25,11 +25,11 @@ CREATE TABLE IF NOT EXISTS employers (
     password VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20),
     description TEXT,
+    field VARCHAR(255),
     scope VARCHAR(255),
     representative_name VARCHAR(255) NOT NULL,
     cid VARCHAR(50) NOT NULL,
     is_verified BOOLEAN DEFAULT FALSE,
-    status VARCHAR(50) DEFAULT 'active',
     score INTEGER DEFAULT 100,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -43,12 +43,18 @@ CREATE TABLE IF NOT EXISTS jobs (
     description TEXT,
     requirements TEXT,
     benefits TEXT,
-    salary_min DECIMAL(12, 2),
-    salary_max DECIMAL(12, 2),
+    salary_min INTEGER,
+    salary_max INTEGER,
     location VARCHAR(255),
-    is_remote BOOLEAN DEFAULT FALSE,
+    role VARCHAR(255),
+    education_level VARCHAR(50),
+    experience INT DEFAULT 0,
+    num_slot INT DEFAULT 1,
+    job_type VARCHAR(20) NOT NULL
+    CHECK (job_type IN ('remote', 'offline', 'hybrid')),
+    working_shifts TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
     expiry_date DATE,
-    status VARCHAR(50) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (employer_id) REFERENCES employers(emp_id) ON DELETE CASCADE
@@ -59,7 +65,9 @@ CREATE TABLE IF NOT EXISTS applications (
     application_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     job_id UUID NOT NULL,
     candidate_id UUID NOT NULL,
-    status VARCHAR(50) DEFAULT 'pending',
+    cv_url TEXT NOT NULL,
+    status VARCHAR(50) DEFAULT 'submitted'
+    CHECK (status IN ('submitted', 'screening','interview', 'rejected','withdrawn','recruited')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE,
@@ -73,7 +81,9 @@ CREATE TABLE IF NOT EXISTS interviews (
     emp_id UUID NOT NULL,
     candidate_id UUID NOT NULL,
     time TIMESTAMP,
+    duration INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (job_id) REFERENCES jobs(job_id) ON DELETE CASCADE,
     FOREIGN KEY (emp_id) REFERENCES employers(emp_id) ON DELETE CASCADE,
     FOREIGN KEY (candidate_id) REFERENCES candidates(candidate_id) ON DELETE CASCADE
@@ -101,12 +111,15 @@ CREATE TABLE IF NOT EXISTS feedbacks (
     FOREIGN KEY (emp_id) REFERENCES employers(emp_id) ON DELETE CASCADE
 );
 
--- Blacklist Table
-CREATE TABLE IF NOT EXISTS blacklists (
-    blacklist_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    entity_id UUID NOT NULL,
-    reason TEXT,
-    evidence TEXT,
+---Transaction Table
+CREATE TABLE IF NOT EXISTS transactions (
+    transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    amount INT NOT NULL,
+    currency VARCHAR(20) NOT NULL DEFAULT 'VND',
+    status VARCHAR(50) DEFAULT 'pending'
+    CHECK (status IN ('pending', 'processing','completed', 'failed')),
+    provider_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (entity_id) REFERENCES employers(emp_id) ON DELETE CASCADE
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
