@@ -1,16 +1,28 @@
 from sqlalchemy.engine import Engine
 from sqlalchemy import text
+from src.utils.sql_builder import build_insert_parts
 
 def add_job(engine, job_data: dict) -> dict:
-    """Add a new job to the database."""
+    """Add a new job with dynamic columns."""
     try:
         with engine.begin() as connection:
-            query = text("INSERT INTO jobs (employer_id,title, description,requirements,benefits, salary_min, salary_max, location, is_remote,expiry_date,status) VALUES (:employer_id,:title, :description, :requirements, :benefits, :salary_min, :salary_max, :location, :is_remote,:expiry_date,:status)")
+
+            # Lấy danh sách column từ job_data
+            _,col_clause,val_clause = build_insert_parts(job_data)
+
+
+            query = text(f"""
+                INSERT INTO jobs ({col_clause})
+                VALUES ({val_clause})
+            """)
+
             connection.execute(query, job_data)
+
             return {
                 "status": True,
                 "message": "Job added successfully"
             }
+
     except Exception as error:
         return {
             "status": False,
@@ -50,8 +62,10 @@ def update_job(engine, update_data: dict) -> dict:
                     "status": False,
                     "error": "Job ID is required for updating job information"
                 }
-            set_clause = ", ".join([f"{key} = :{key}" for key in update_data.keys()])
-            query = text(f"UPDATE jobs SET {set_clause} WHERE job_id = :job_id")
+            cols = [col for col in update_data.keys() if update_data[col] is not None]
+                    
+            set_clause = ", ".join(f"{col} = :{col}" for col in cols)
+            query = text(f"UPDATE jobs SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE job_id = :job_id")
             connection.execute(query, {**update_data, "job_id": update_data["job_id"]})
             
             return {
@@ -103,12 +117,6 @@ def search_job(engine, search_criteria: dict) -> dict:
             if "salary_min" in search_criteria and search_criteria["salary_min"] is not None:
                 conditions.append("salary_max >= :salary_min")
                 params["salary_min"] = search_criteria["salary_min"]
-            
-
-            # remote filter
-            if "is_remote" in search_criteria and search_criteria["is_remote"] is not None:
-                conditions.append("is_remote = :is_remote")
-                params["is_remote"] = search_criteria["is_remote"]
 
             # build WHERE
             where_clause = " AND ".join(conditions)
@@ -127,19 +135,7 @@ def search_job(engine, search_criteria: dict) -> dict:
             params["limit"] = search_criteria.get("limit", 10)
 
             query = text(f"""
-                SELECT
-                    job_id,
-                    employer_id,
-                    title,
-                    description,
-                    requirements,
-                    benefits,
-                    salary_min,
-                    salary_max,
-                    location,
-                    is_remote,
-                    expiry_date,
-                    status
+                SELECT *
                 FROM jobs
                 WHERE {where_clause}
                 {order_clause}
@@ -156,6 +152,35 @@ def search_job(engine, search_criteria: dict) -> dict:
                 "count": len(jobs)
             }
 
+    except Exception as error:
+        return {
+            "status": False,
+            "error": str(error)
+        }
+def get_job_by_id(engine: Engine, job_id: str) -> dict:
+    try:
+        with engine.begin() as connection:
+            query = text("SELECT * FROM jobs WHERE job_id = :job_id")
+            result = connection.execute(query, {"job_id": job_id}).fetchall()
+            return {
+                "status": True,
+                "job": result
+            }
+    except Exception as error:
+        return {
+            "status": False,
+            "error": str(error)
+        }
+
+def get_job_by_emp_id(engine: Engine, employer_id: str) -> dict:
+    try:
+        with engine.begin() as connection:
+            query = text("SELECT * FROM jobs WHERE employer_id = :employer_id")
+            result = connection.execute(query, {"employer_id": employer_id}).fetchall()
+            return {
+                "status": True,
+                "job": result
+            }
     except Exception as error:
         return {
             "status": False,

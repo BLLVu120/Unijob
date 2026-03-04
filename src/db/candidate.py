@@ -2,6 +2,42 @@ import os
 from sqlalchemy.engine import Engine
 from sqlalchemy import text
 
+### CREATE--------------------------------------------------------------------------------
+def add_new_candidate(engine, candidate_data: dict) -> dict:
+    """Add a new candidate to the database."""
+    try:
+        # Validate required fields
+        required_fields = ['full_name', 'dob', 'gender', 'email', 'password', 'phone_number', 'address', 'cid']
+        for field in required_fields:
+            if field not in candidate_data:
+                return {
+                    "status": False,
+                    "error": f"Missing required field: {field}"
+                }
+        
+        with engine.begin() as connection:
+            # Insert new candidate
+            query = text("""
+                INSERT INTO candidates 
+                (full_name, dob, gender, email, password, phone_number, address, cid)
+                VALUES 
+                (:full_name, :dob, :gender, :email, :password, :phone_number, :address, :cid)
+            """)
+            
+            stmt = connection.execute(query, candidate_data)
+            
+            return {
+                "status": True,
+                "message": "Candidate added successfully",
+            }
+            
+    except Exception as error:
+        return {
+            "status": False,
+            "error": str(error)
+        }
+        
+### READ--------------------------------------------------------------------------------
 def get_candidate_by_email(engine, email: str) -> dict:
     """Retrieve a candidate by email from the database."""
     try:
@@ -28,40 +64,33 @@ def get_candidate_by_email(engine, email: str) -> dict:
             "error": str(error)
         }
 
-def add_new_candidate(engine, candidate_data: dict) -> dict:
-    """Add a new candidate to the database."""
+def get_candidate_by_id(engine, id: str) -> dict:
+    """Retrieve a candidate by email from the database."""
     try:
-        # Validate required fields
-        required_fields = ['full_name', 'dob', 'gender', 'email', 'password', 'phone_number', 'address', 'cid']
-        for field in required_fields:
-            if field not in candidate_data:
+        with engine.connect() as conn:
+            query = text("SELECT * FROM candidates WHERE candidate_id = :candidate_id")
+            result = conn.execute(query, {"candidate_id": id})
+
+            row = result.fetchone()
+
+            if row is not None:
                 return {
-                    "status": False,
-                    "error": f"Missing required field: {field}"
+                    "status": True,
+                    "candidate": dict(row._mapping)
                 }
-        
-        with engine.begin() as connection:
-            # Insert new candidate
-            query = text("""
-                INSERT INTO candidates 
-                (full_name, dob, gender, email, password, phone_number, address, cid,linkedin_link)
-                VALUES 
-                (:full_name, :dob, :gender, :email, :password, :phone_number, :address, :cid, :linkedin_link)
-            """)
-            
-            stmt = connection.execute(query, candidate_data)
-            
-            return {
-                "status": True,
-                "message": "Candidate added successfully",
-            }
-            
+            else:
+                return {
+                    "status": True,
+                    "candidate": []
+                }
+
     except Exception as error:
         return {
             "status": False,
             "error": str(error)
         }
 
+### UPDATE--------------------------------------------------------------------------------
 def update_candidate(engine, email: str, update_data: dict) -> dict:
     """
     Update candidate information in the database.
@@ -76,10 +105,10 @@ def update_candidate(engine, email: str, update_data: dict) -> dict:
     """
     try:
         # List of fields that can be updated
-        allowed_fields = ['full_name', 'dob', 'gender', 'password', 'phone_number', 'address']
+        allowed_fields = ['dob', 'gender', 'password', 'phone_number', 'address','is_verified']
         
         # Filter only allowed fields from update_data
-        fields_to_update = {k: v for k, v in update_data.items() if k in allowed_fields}
+        fields_to_update = {k: v for k, v in update_data.items() if k in allowed_fields and v is not None}
         
         if not fields_to_update:
             return {
@@ -124,6 +153,31 @@ def update_candidate(engine, email: str, update_data: dict) -> dict:
                 "updated_fields": list(fields_to_update.keys())
             }
             
+    except Exception as error:
+        return {
+            "status": False,
+            "error": str(error)
+        }
+
+### DELETE--------------------------------------------------------------------------------
+def delete_candidate(engine, email: str) -> dict:
+    """Delete a candidate from the database by email."""
+    try:
+        with engine.begin() as connection:
+            query = text("DELETE FROM candidates WHERE email = :email")
+            result = connection.execute(query, {"email": email})
+
+            if result.rowcount > 0:
+                return {
+                    "status": True,
+                    "message": "Candidate deleted successfully"
+                }
+            else:
+                return {
+                    "status": True,
+                    "error": "Candidate not found"
+                }
+
     except Exception as error:
         return {
             "status": False,

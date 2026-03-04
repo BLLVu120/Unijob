@@ -18,7 +18,7 @@ def get_all_employers(engine):
             "status": False,
             "error": str(error)
         }
-        
+
 def get_all_candidates(engine):
     """Retrieve all candidates from the database."""
     try:
@@ -51,7 +51,55 @@ def get_all_jobs(engine):
             "status": False,
             "error": str(error)}
 
-def get_all_feedback(engine):
+def get_all_applications(engine):
+    """Retrieve all applications from the database."""
+    try:
+        with engine.connect() as connection:
+            query = text("SELECT * FROM applications")
+            result = connection.execute(query)
+            return {
+                "status": True,
+                "applications": result.fetchall()
+            }
+    except Exception as error:
+        print(f"Error retrieving applications: {error}")
+        return {
+            "status": False,
+            "error": str(error)}
+
+def get_all_interviews(engine):
+    """Retrieve all interviews from the database."""
+    try:
+        with engine.connect() as connection:
+            query = text("SELECT * FROM interviews")
+            result = connection.execute(query)
+            return {
+                "status": True,
+                "interviews": result.fetchall()
+            }
+    except Exception as error:
+        print(f"Error retrieving interviews: {error}")
+        return {
+            "status": False,
+            "error": str(error)}
+
+def get_all_messages(engine):
+    """Retrieve all messages from the database."""
+    try:
+        with engine.connect() as connection:
+            query = text("SELECT * FROM messages")
+            result = connection.execute(query)
+            return {
+                "status": True,
+                "messages": result.fetchall()
+            }
+    except Exception as error:
+        print(f"Error retrieving messages: {error}")
+        return {
+            "status": False,
+            "error": str(error)}
+
+def get_all_feedbacks(engine):
     """Retrieve all feedback from the database."""
     try:
         with engine.connect() as connection:
@@ -67,30 +115,19 @@ def get_all_feedback(engine):
             "status": False,
             "error": str(error)}
 
-### DELETE --------------------------------------------------------------------------------
-def delete_candidate(engine, email: str) -> dict:
-    """Delete a candidate from the database by email."""
+def get_all_transactions(engine):
+    """Retrieve all transactions from the database."""
     try:
-        with engine.begin() as connection:
-            query = text("DELETE FROM candidates WHERE email = :email")
-            result = connection.execute(query, {"email": email})
-
-            if result.rowcount > 0:
-                return {
-                    "status": True,
-                    "message": "Candidate deleted successfully"
-                }
-            else:
-                return {
-                    "status": True,
-                    "error": "Candidate not found"
-                }
-
+        with engine.connect() as connection:
+            query = text("SELECT * FROM transactions")
+            result = connection.execute(query)
+            return {
+                "status": True,
+                "transactions": result.fetchall()
+            }
     except Exception as error:
+        print(f"Error retrieving transactions: {error}")
         return {
             "status": False,
-            "error": str(error)
-        }
-
-### UPDATE --------------------------------------------------------------------------------
+            "error": str(error)}
 
