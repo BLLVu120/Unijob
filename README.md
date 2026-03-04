@@ -38,18 +38,18 @@ Giải quyết an ninh lao động trực tuyến, đặc biệt ở các nướ
     > docker compose up -d
 6. Fill information .env file
 
-| Biến        | Kiểu dữ liệu | Mô tả                                            | Ví dụ           |
-| ----------- | ------------ | ------------------------------------------------ | --------------- |
-| DB_HOST     | string       | Địa chỉ server database                          | localhost       |
-| DB_PORT     | integer      | Cổng kết nối database (PostgreSQL mặc định 5432) | 5432            |
-| DB_NAME     | string       | Tên database sẽ sử dụng                          | unijob_db       |
-| DB_USER     | string       | Username dùng để kết nối database                | unijob_user     |
-| DB_PASSWORD | string       | Mật khẩu của database user                       | unijob_password |
-7. Access src/
+| Biến        | Kiểu dữ liệu | Mô tả                                            | 
+| ----------- | ------------ | ------------------------------------------------ |
+| DB_HOST     | string       | Địa chỉ server database                          | 
+| DB_PORT     | integer      | Cổng kết nối database (PostgreSQL mặc định 5432) | 
+| DB_NAME     | string       | Tên database sẽ sử dụng                          | 
+| DB_USER     | string       | Username dùng để kết nối database                | 
+| DB_PASSWORD | string       | Mật khẩu của database user                       |
+1. Access src/
    > cd src/
-8. Run API
+2. Run API
     > python -m api.v1
-9.  Access API tại http://0.0.0.0:8000/docs
+3.  Access API tại http://0.0.0.0:8000/docs
 
 ## DB Management
 1. Run Docker Compose:
