@@ -5,3 +5,4 @@ sqlalchemy
 fastapi
 pydantic
 uvicorn
+python-multipart
