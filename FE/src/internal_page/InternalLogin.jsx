@@ -1,17 +1,37 @@
 import { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import { User, Lock, Eye, EyeOff, UserCheck } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
 const C = COLORS;
 
+const mockUsers = {
+  "admin@gmail.com": { name: "Admin System", password: "123456", role: "admin" },
+  "moderator@gmail.com": { name: "Moderator", password: "123456", role: "moderator" },
+};
+
+const redirectMap = {
+  admin: "/internal/admin/users",
+  moderator: "/internal/moderator/job-approval",
+};
+
 export default function InternalLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Login attempt:', { username, password });
+    const user = mockUsers[username];
+    if (!user || user.password !== password) {
+      alert("Sai tài khoản hoặc mật khẩu");
+      return;
+    }
+
+    const redirectPath = redirectMap[user.role];
+    localStorage.setItem("user", JSON.stringify(user));
+    navigate(redirectPath);
   };
 
   return (

@@ -5,6 +5,8 @@ import MainLayout from './layouts/MainLayout';
 import CandidateLayout from './layouts/CandidateLayout';
 import EmployerLayout from './layouts/EmployerLayout';
 import InternalLayout from './layouts/InternalLayout';
+import AdminLayout from './layouts/AdminLayout';
+import ModeratorLayout from './layouts/ModeratorLayout';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -34,6 +36,8 @@ import CompanyManagement from './internal_page/admin_page/CompanyManagement';
 import JobApproval from './internal_page/moderator_page/JobApproval';
 import Reports from './internal_page/moderator_page/Reports';
 
+import ProtectedRoute from './components/ProtectedRoute';
+
 export default function App() {
   const [user, setUser] = useState(null);
 
@@ -54,36 +58,51 @@ export default function App() {
         <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<EmailVerificationPage />} />
+
         <Route path="/jobs" element={<JobPage />} />
         <Route path="/job-detail" element={<JobDetailPage />} />
+
         <Route path="/company" element={<CompanyPage />} />
         <Route path="/company-detail" element={<CompanyDetailPage />} />
 
-        <Route path="/candidate" element={<CandidateLayout />}>
-          <Route path="profile" element={<CandidateProfile />} />
-          <Route path="change-password" element={<ChangePassword />} />
-          <Route path="messages" element={<CandidateChat />} />
-          <Route path="applied-jobs" element={<JobApplied />} />
+        <Route element={<ProtectedRoute user={user} allowedRoles={["candidate"]} />}>
+          <Route path="/candidate" element={<CandidateLayout />}>
+            <Route path="profile" element={<CandidateProfile />} />
+            <Route path="change-password" element={<ChangePassword />} />
+            <Route path="messages" element={<CandidateChat />} />
+            <Route path="applied-jobs" element={<JobApplied />} />
+          </Route>
         </Route>
 
-        <Route path="/employer" element={<EmployerLayout />}>
-          <Route path="company-profile" element={<CompanyProfile />} />
-          <Route path="subscription" element={<Subscription />} />
-          <Route path="transactions" element={<TransactionHistory />} />
-          <Route path="verification" element={<CompanyVerification />} />
-          <Route path="messages" element={<CompanyChat />} />
-          <Route path="candidates" element={<CandidateList />} />
-          <Route path="jobs" element={<JobManagement />} />
+        <Route element={<ProtectedRoute user={user} allowedRoles={["employer"]} />}>
+          <Route path="/employer" element={<EmployerLayout />}>
+            <Route path="company-profile" element={<CompanyProfile />} />
+            <Route path="subscription" element={<Subscription />} />
+            <Route path="transactions" element={<TransactionHistory />} />
+            <Route path="verification" element={<CompanyVerification />} />
+            <Route path="messages" element={<CompanyChat />} />
+            <Route path="candidates" element={<CandidateList />} />
+            <Route path="jobs" element={<JobManagement />} />
+          </Route>
         </Route>
       </Route>
 
       <Route path="/internal/login" element={<InternalLogin />} />
 
-      <Route path="/internal" element={<InternalLayout />}>
-        <Route path="admin/users" element={<UserManagement />} />
-        <Route path="admin/companies" element={<CompanyManagement />} />
-        <Route path="moderator/job-approval" element={<JobApproval />} />
-        <Route path="moderator/reports" element={<Reports />} />
+      <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+        <Route path="/internal/admin" element={<AdminLayout onLogout={handleLogout} />}>
+          <Route index element={<UserManagement />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="companies" element={<CompanyManagement />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["moderator"]} />}>
+        <Route path="/internal/moderator" element={<ModeratorLayout onLogout={handleLogout} />}>
+          <Route index element={<JobApproval />} />
+          <Route path="job-approval" element={<JobApproval />} />
+          <Route path="reports" element={<Reports />} />
+        </Route>
       </Route>
     </Routes>
   );

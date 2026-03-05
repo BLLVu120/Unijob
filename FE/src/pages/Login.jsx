@@ -1,21 +1,16 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Building2, Mail, Lock, Eye, EyeOff, Shield, Zap, CreditCard, CheckCircle } from 'lucide-react';
+import { COLORS } from '../constants/colors';
 
-const COLORS = {
-  navy: '#2c3e50',
-  navyDark: '#1a252f',
-  blue: '#3b82f6',
-  blueGradient: '#4c8bf5',
-  purple: '#8b7fd6',
-  purpleGradient: '#9d8fe0',
-  red: '#ef4444',
-  orange: '#fbbf24',
-  cream: '#fef3e2',
-  white: '#ffffff',
-  gray: '#6b7280',
-  grayLight: '#9ca3af',
-  border: '#e5e7eb'
+const mockUsers = {
+  "candidate@gmail.com": { name: "Nguyễn Văn A", password: "123456", role: "candidate" },
+  "employer@gmail.com": { name: "The Coffee House", password: "123456", role: "employer" },
+};
+
+const redirectMap = {
+  candidate: "/candidate/profile",
+  employer: "/employer/company-profile",
 };
 
 const RoleSelector = ({ selectedRole, onRoleChange }) => (
@@ -89,33 +84,6 @@ const RoleSelector = ({ selectedRole, onRoleChange }) => (
   </div>
 );
 
-const SocialButton = ({ provider, icon, color, onClick }) => (
-  <button
-    onClick={onClick}
-    style={{
-      width: '100%',
-      padding: '12px',
-      borderRadius: '8px',
-      border: 'none',
-      background: color,
-      color: COLORS.white,
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'all 0.2s',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '8px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-    }}
-    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-  >
-    {icon} Đăng nhập với {provider}
-  </button>
-);
-
 const CandidateLoginForm = ({ setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -142,19 +110,28 @@ const CandidateLoginForm = ({ setUser }) => {
     e.preventDefault();
     if (!validate()) return;
 
-    if (email === 'test@gmail.com' && password === '123456') {
-      const mockUser = {
-        name: 'Nguyễn Văn A',
-        email,
-        role: 'Ứng viên',
-        isEmployer: true
-      };
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
-      navigate('/');
-    } else {
-      setErrors({ form: 'Sai email hoặc mật khẩu' });
+    const user = mockUsers[email];
+
+    if (!user || user.password !== password) {
+      setErrors({ form: "Sai email hoặc mật khẩu" });
+      return;
     }
+
+    if (user.role !== "candidate") {
+      setErrors({ form: "Tài khoản này không phải ứng viên" });
+      return;
+    }
+
+    const loggedUser = {
+      name: user.name,
+      email,
+      role: user.role,
+      roleName: "Ứng viên"
+    };
+
+    localStorage.setItem("user", JSON.stringify(loggedUser));
+    setUser(loggedUser);
+    navigate(redirectMap[user.role]);
   };
 
   return (
@@ -326,19 +303,28 @@ const EmployerLoginForm = ({ setUser }) => {
     e.preventDefault();
     if (!validate()) return;
 
-    if (email === 'company@company.com' && password === '12345678') {
-      const mockUser = {
-        name: 'Công ty ABC',
-        email,
-        role: 'Nhà tuyển dụng',
-        isEmployer: true
-      };
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      setUser(mockUser);
-      navigate('/');
-    } else {
-      setErrors({ form: 'Sai email hoặc mật khẩu' });
+    const user = mockUsers[email];
+
+    if (!user || user.password !== password) {
+      setErrors({ form: "Sai email hoặc mật khẩu" });
+      return;
     }
+
+    if (user.role !== "employer") {
+      setErrors({ form: "Tài khoản này không phải nhà tuyển dụng" });
+      return;
+    }
+
+    const loggedUser = {
+      name: user.name,
+      email,
+      role: user.role,
+      roleName: "Nhà tuyển dụng"
+    };
+
+    localStorage.setItem("user", JSON.stringify(loggedUser));
+    setUser(loggedUser);
+    navigate(redirectMap[user.role]);
   };
 
   return (
@@ -637,26 +623,6 @@ const LoginPage = ({ setUser }) => {
             selectedRole={selectedRole} 
             onRoleChange={setSelectedRole}
           />
-
-          <div style={{ marginBottom: '16px' }}>
-            <SocialButton 
-              provider="Google"
-              icon="G"
-              color={COLORS.red}
-              onClick={() => console.log('Google login')}
-            />
-          </div>
-
-          {selectedRole === 'candidate' && (
-            <div style={{ marginBottom: '24px' }}>
-              <SocialButton 
-                provider="Facebook"
-                icon="f"
-                color={COLORS.blue}
-                onClick={() => console.log('Facebook login')}
-              />
-            </div>
-          )}
 
           <div style={{
             display: 'flex',

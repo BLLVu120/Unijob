@@ -308,23 +308,6 @@ export default function MessagesPage() {
             <div style={{
               ...flex('center'), gap: 12
             }}>
-              <button style={{
-                width: 40, height: 40, borderRadius: 8,
-                background: C.grayBg, border: 'none',
-                cursor: 'pointer', ...flex('center'), justifyContent: 'center',
-                transition: 'all 0.2s'
-              }}>
-                <Paperclip size={20} color={C.gray} />
-              </button>
-              <button style={{
-                width: 40, height: 40, borderRadius: 8,
-                background: C.grayBg, border: 'none',
-                cursor: 'pointer', ...flex('center'), justifyContent: 'center',
-                transition: 'all 0.2s'
-              }}>
-                <Image size={20} color={C.gray} />
-              </button>
-
               <input
                 value={messageText}
                 onChange={e => setMessageText(e.target.value)}

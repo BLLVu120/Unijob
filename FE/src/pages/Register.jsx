@@ -1,26 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin, Calendar, Briefcase, Shield, Zap, CreditCard, CheckCircle } from 'lucide-react';
-
-const COLORS = {
-  navy: '#2c3e50',
-  navyDark: '#1a252f',
-  blue: '#3b82f6',
-  blueGradient: '#4c8bf5',
-  purple: '#8b7fd6',
-  purpleGradient: '#9d8fe0',
-  red: '#ef4444',
-  orange: '#fbbf24',
-  cream: '#fef3e2',
-  white: '#ffffff',
-  gray: '#6b7280',
-  grayLight: '#9ca3af',
-  border: '#e5e7eb',
-  yellow: '#fef3c7',
-  yellowBorder: '#fcd34d',
-  blueLight: '#dbeafe',
-  blueBorder: '#93c5fd'
-};
+import { User, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin, Calendar, Briefcase, Shield, Zap, CreditCard, CheckCircle, IdCard } from 'lucide-react';
+import { COLORS } from '../constants/colors';
 
 const RoleSelector = ({ selectedRole, onRoleChange }) => (
   <div style={{
@@ -161,34 +142,6 @@ const InputField = ({ label, type = 'text', placeholder, icon: Icon, required, v
   </div>
 );
 
-const SocialButton = ({ provider, color, onClick }) => (
-  <button
-    onClick={onClick}
-    style={{
-      width: '100%',
-      padding: '12px',
-      borderRadius: '8px',
-      border: 'none',
-      background: color,
-      color: COLORS.white,
-      fontSize: '14px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'all 0.2s',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '8px',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-      marginBottom: '12px'
-    }}
-    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-  >
-    {provider === 'Google' ? 'G' : 'f'} Đăng nhập với {provider}
-  </button>
-);
-
 const FeatureItem = ({ icon: Icon, text }) => (
   <div style={{
     display: 'flex',
@@ -231,6 +184,7 @@ const navigate = useNavigate();
     birthDate: '',
     gender: '',
     address: '',
+    IdCard: '',
     agreed: false
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -278,6 +232,11 @@ const navigate = useNavigate();
     if (!formData.address)
       newErrors.address = 'Vui lòng nhập địa chỉ';
 
+    if (!formData.IdCard)
+      newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD';
+    else if (formData.IdCard.length !== 12 || !/^\d+$/.test(formData.IdCard))
+      newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD hợp lệ (12 chữ số)';
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -286,7 +245,6 @@ const navigate = useNavigate();
     e.preventDefault();
     if (!validate()) return;
 
-    // ✅ MOCK DATA
     const mockUser = {
       email: formData.email,
       role: 'candidate',
@@ -295,8 +253,6 @@ const navigate = useNavigate();
     };
 
     localStorage.setItem('pendingUser', JSON.stringify(mockUser));
-
-    // ✅ CHUYỂN SANG TRANG XÁC THỰC EMAIL
     navigate('/verify-email');
   };
 
@@ -474,6 +430,20 @@ const navigate = useNavigate();
       </div>
 
       <InputField
+        label="Số CMND/CCCD"
+        placeholder="Nhập số CMND/CCCD"
+        icon={IdCard}
+        required
+        value={formData.IdCard}
+        onChange={(val) => setFormData({...formData, IdCard: val})}
+      />
+      {errors.IdCard && (
+        <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '-10px', marginBottom: '15px' }}>
+          {errors.IdCard}
+        </div>
+      )}
+
+      <InputField
         label="Địa chỉ"
         placeholder="Nhập địa chỉ nhà"
         icon={MapPin}
@@ -553,7 +523,9 @@ const navigate = useNavigate();
     password: '',
     confirmPassword: '',
     companyName: '',
+    IdCard: '',
     address: '',
+    taxRegistrationNumber: '',
     agreed: false
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -587,8 +559,16 @@ const navigate = useNavigate();
       if (!formData.companyName)
         newErrors.companyName = 'Vui lòng nhập tên công ty';
 
+      if (!formData.IdCard)
+        newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD';
+      else if (formData.IdCard.length !== 12 || !/^\d+$/.test(formData.IdCard))
+        newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD hợp lệ (12 chữ số)';
+
       if (!formData.address)
         newErrors.address = 'Vui lòng nhập địa chỉ';
+
+      if (!formData.taxRegistrationNumber)
+        newErrors.taxRegistrationNumber = 'Vui lòng nhập mã số thuế';
 
       if (!formData.agreed)
         newErrors.agreed = 'Bạn phải đồng ý điều khoản';
@@ -721,6 +701,20 @@ const navigate = useNavigate();
       )}
 
       <InputField
+        label="Số CMND/CCCD"
+        placeholder="Nhập số CMND/CCCD"
+        icon={IdCard}
+        required
+        value={formData.IdCard}
+        onChange={(val) => setFormData({...formData, IdCard: val})}
+      />
+      {errors.IdCard && (
+        <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '-10px', marginBottom: '15px' }}>
+          {errors.IdCard}
+        </div>
+      )}
+
+      <InputField
         label="Địa chỉ"
         placeholder="Nhập địa chỉ"
         icon={MapPin}
@@ -731,6 +725,20 @@ const navigate = useNavigate();
       {errors.address && (
         <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '-10px', marginBottom: '15px' }}>
           {errors.address}
+        </div>
+      )}
+
+      <InputField
+        label="Mã số thuế"
+        placeholder="Nhập mã số thuế"
+        icon={IdCard}
+        required
+        value={formData.taxRegistrationNumber}
+        onChange={(val) => setFormData({...formData, taxRegistrationNumber: val})}
+      />
+      {errors.taxRegistrationNumber && (
+        <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '-10px', marginBottom: '15px' }}>
+          {errors.taxRegistrationNumber}
         </div>
       )}
 
@@ -913,20 +921,6 @@ const RegistrationPage = () => {
             selectedRole={selectedRole} 
             onRoleChange={setSelectedRole}
           />
-
-          <SocialButton 
-            provider="Google"
-            color={COLORS.red}
-            onClick={() => console.log('Google signup')}
-          />
-
-          {selectedRole === 'candidate' && (
-            <SocialButton 
-              provider="Facebook"
-              color={COLORS.blue}
-              onClick={() => console.log('Facebook signup')}
-            />
-          )}
 
           <div style={{
             display: 'flex',

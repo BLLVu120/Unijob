@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Link } from "react-router-dom";
 import { User, Bookmark, Send, MessageSquare, Lock, Building2, FileText, Users, CreditCard, Receipt, ShieldCheck }
 from 'lucide-react';
 import { COLORS } from '../constants/colors';
@@ -194,17 +195,19 @@ const Navbar = ({ isLoggedIn, isEmployer, userData, onLogout }) => {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
-        <div
-          style={{
-            fontSize: '24px',
-            fontWeight: '700',
-            color: COLORS.white,
-            letterSpacing: '0.5px',
-            cursor: 'pointer'
-          }}
-        >
-          UNIJOB
-        </div>
+        <Link to="/" style={{ textDecoration: "none" }}>
+          <div
+            style={{
+              fontSize: "24px",
+              fontWeight: "700",
+              color: COLORS.white,
+              letterSpacing: "0.5px",
+              cursor: "pointer"
+            }}
+          >
+            UNIJOB
+          </div>
+        </Link>
 
         <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
           {['Tìm việc', 'Nhà tuyển dụng'].map((item, idx) => (
@@ -294,7 +297,7 @@ const Navbar = ({ isLoggedIn, isEmployer, userData, onLogout }) => {
                   opacity: 0.8
                 }}
               >
-                {userData?.role}
+                {userData?.roleName}
               </div>
             </div>
             <svg

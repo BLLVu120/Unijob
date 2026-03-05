@@ -1,8 +1,78 @@
+import { useState, useRef } from 'react';
 import { Mail, RefreshCw, AlertCircle } from 'lucide-react';
 import { COLORS } from '../constants/colors';
 
 const EmailVerificationPage = () => {
   const userEmail = 'user@example.com';
+  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [error, setError] = useState('');
+  const inputRefs = useRef([]);
+
+  const handleChange = (index, value) => {
+    if (value && !/^\d$/.test(value)) return;
+
+    const newCode = [...code];
+    newCode[index] = value;
+    setCode(newCode);
+    setError('');
+
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+
+    if (index === 5 && value && newCode.every(digit => digit !== '')) {
+      handleVerify(newCode.join(''));
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').slice(0, 6);
+    
+    if (!/^\d+$/.test(pastedData)) return;
+
+    const newCode = [...code];
+    pastedData.split('').forEach((digit, i) => {
+      if (i < 6) newCode[i] = digit;
+    });
+    setCode(newCode);
+
+    const lastFilledIndex = Math.min(pastedData.length - 1, 5);
+    inputRefs.current[lastFilledIndex]?.focus();
+
+    if (pastedData.length === 6) {
+      handleVerify(newCode.join(''));
+    }
+  };
+
+  const handleVerify = (codeString) => {
+    setIsVerifying(true);
+    
+    setTimeout(() => {
+      if (codeString === '123456') {
+        console.log('Verification successful!');
+      } else {
+        setError('Mã xác nhận không đúng. Vui lòng thử lại.');
+        setCode(['', '', '', '', '', '']);
+        inputRefs.current[0]?.focus();
+      }
+      setIsVerifying(false);
+    }, 1000);
+  };
+
+  const handleResend = () => {
+    console.log('Resend code');
+    setCode(['', '', '', '', '', '']);
+    setError('');
+    inputRefs.current[0]?.focus();
+  };
 
   return (
     <div style={{
@@ -12,12 +82,11 @@ const EmailVerificationPage = () => {
       minHeight: '100vh',
       background: COLORS.cream
     }}>
-      
       <main style={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: 'calc(100vh - 76px)',
+        minHeight: '100vh',
         padding: '40px 24px'
       }}>
         <div style={{
@@ -37,7 +106,7 @@ const EmailVerificationPage = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '0 auto 24px'
+            margin: '0 auto 16px'
           }}>
             <Mail size={40} color={COLORS.white} strokeWidth={2} />
           </div>
@@ -48,7 +117,7 @@ const EmailVerificationPage = () => {
             color: COLORS.navy,
             marginBottom: '8px'
           }}>
-            Kiểm tra email của bạn
+            Xác thực email
           </h2>
 
           <p style={{
@@ -57,29 +126,129 @@ const EmailVerificationPage = () => {
             marginBottom: '16px',
             lineHeight: '1.6'
           }}>
-            Chúng tôi đã gửi một email xác minh đến
+            Chúng tôi đã gửi mã xác nhận 6 chữ số đến
           </p>
 
           <div style={{
             background: COLORS.lightGray,
             border: `1px solid ${COLORS.border}`,
             borderRadius: '12px',
-            marginBottom: '24px',
+            marginBottom: '32px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '12px 18px'
           }}>
             <Mail size={18} color={COLORS.navy} />
             <span style={{
               fontSize: '15px',
               fontWeight: '600',
-              color: COLORS.navy,
-              padding: '12px 18px 12px 12px',
-              borderRadius: '8px',
+              color: COLORS.navy
             }}>
               {userEmail}
             </span>
           </div>
+
+          <p style={{
+            fontSize: '14px',
+            fontWeight: '600',
+            color: COLORS.navy,
+            marginBottom: '16px'
+          }}>
+            Nhập mã xác nhận
+          </p>
+
+          {/* 6-digit code input */}
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'center',
+            marginBottom: '16px'
+          }}>
+            {code.map((digit, index) => (
+              <input
+                key={index}
+                ref={el => inputRefs.current[index] = el}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                onPaste={index === 0 ? handlePaste : undefined}
+                disabled={isVerifying}
+                style={{
+                  width: '56px',
+                  height: '64px',
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  border: error 
+                    ? `2px solid ${COLORS.red}` 
+                    : digit 
+                      ? `2px solid ${COLORS.purple}` 
+                      : `2px solid ${COLORS.border}`,
+                  borderRadius: '12px',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                  background: isVerifying ? COLORS.lightGray : COLORS.white,
+                  color: COLORS.navy,
+                  cursor: isVerifying ? 'not-allowed' : 'text'
+                }}
+                onFocus={(e) => {
+                  if (!error) {
+                    e.target.style.borderColor = COLORS.purple;
+                    e.target.style.boxShadow = `0 0 0 3px ${COLORS.purpleGradient}33`;
+                  }
+                }}
+                onBlur={(e) => {
+                  if (!error && !digit) {
+                    e.target.style.borderColor = COLORS.border;
+                    e.target.style.boxShadow = 'none';
+                  }
+                }}
+              />
+            ))}
+          </div>
+
+          {error && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              marginBottom: '16px',
+              color: COLORS.red,
+              fontSize: '13px'
+            }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {isVerifying && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              marginBottom: '16px',
+              color: COLORS.purple,
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                border: `2px solid ${COLORS.purple}`,
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite'
+              }} />
+              <span>Đang xác thực...</span>
+            </div>
+          )}
 
           <div style={{
             background: COLORS.yellow,
@@ -101,7 +270,7 @@ const EmailVerificationPage = () => {
                 fontWeight: '600',
                 color: '#92400e'
               }}>
-                Vui lòng kiểm tra email
+                Lưu ý quan trọng
               </span>
             </div>
             <ul style={{
@@ -111,36 +280,10 @@ const EmailVerificationPage = () => {
               color: '#92400e',
               lineHeight: '1.6'
             }}>
-              <li>Nhấp vào liên kết trong email để xác minh tài khoản</li>
               <li>Kiểm tra cả thư mục spam nếu không thấy email</li>
-              <li>Liên kết sẽ hết hạn sau 24 giờ</li>
+              <li>Mã xác nhận sẽ hết hạn sau 10 phút</li>
+              <li>Không chia sẻ mã này với bất kỳ ai</li>
             </ul>
-          </div>
-
-          <div style={{
-            background: COLORS.blueLight,
-            border: `1px solid ${COLORS.blueBorder}`,
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: '24px',
-            textAlign: 'left'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '8px'
-            }}>
-              <AlertCircle size={18} color="#1e40af" style={{ flexShrink: 0, marginTop: '2px' }} />
-              <p style={{
-                margin: 0,
-                fontSize: '13px',
-                color: '#1e40af',
-                lineHeight: '1.6'
-              }}>
-                <strong>Bảo mật:</strong> Chúng tôi sẽ không bao giờ yêu cầu mật khẩu qua email. 
-                Nếu nhận được email đáng ngờ, vui lòng báo cáo ngay.
-              </p>
-            </div>
           </div>
 
           <p style={{
@@ -148,23 +291,26 @@ const EmailVerificationPage = () => {
             color: COLORS.gray,
             marginBottom: '16px'
           }}>
-            Không nhận được email?
+            Không nhận được mã?
           </p>
 
           <button
-            onClick={() => console.log('Resend email')}
+            onClick={handleResend}
+            disabled={isVerifying}
             style={{
               width: '100%',
               padding: '14px',
               borderRadius: '8px',
               border: 'none',
-              background: `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`,
-              color: COLORS.white,
+              background: isVerifying 
+                ? COLORS.lightGray 
+                : `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`,
+              color: isVerifying ? COLORS.gray : COLORS.white,
               fontSize: '15px',
               fontWeight: '600',
-              cursor: 'pointer',
+              cursor: isVerifying ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s',
-              boxShadow: '0 4px 12px rgba(139, 127, 214, 0.3)',
+              boxShadow: isVerifying ? 'none' : '0 4px 12px rgba(139, 127, 214, 0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -172,10 +318,19 @@ const EmailVerificationPage = () => {
             }}
           >
             <RefreshCw size={18} />
-            Gửi lại email
+            Gửi lại mã
           </button>
         </div>
       </main>
+
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
     </div>
   );
 };

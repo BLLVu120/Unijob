@@ -1,15 +1,11 @@
 import { Outlet } from "react-router-dom";
 import DarkSidebar from "../components/DarkSidebar";
 
-const InternalLayout = () => {
+export default function InternalLayout({ onLogout }) {
   return (
-    <div style={{ display: "flex", minHeight: '100%' }}>
-      <DarkSidebar />
-      <div style={{ flex: 1 }}>
-        <Outlet />
-      </div>
-    </div>
+    <>
+      <DarkSidebar handleLogout={onLogout} />
+      <Outlet />
+    </>
   );
-};
-
-export default InternalLayout;
+}

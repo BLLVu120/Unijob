@@ -7,7 +7,7 @@ export default function MainLayout({ user, onLogout }) {
     <>
       <Navbar
         isLoggedIn={!!user}
-        isEmployer={user?.isEmployer}
+        isEmployer={user?.role === "employer"}
         userData={user}
         onLogout={onLogout}
       />

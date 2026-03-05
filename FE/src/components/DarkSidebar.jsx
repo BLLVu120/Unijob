@@ -4,9 +4,12 @@ import { COLORS } from '../constants/colors';
 import { flex, txt } from '../utils/styles';
 const C = COLORS;
 
-const DarkSidebar = ({ role }) => {
+const DarkSidebar = ({ handleLogout }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role;
+
   const adminNav = [
     { icon: Users, label: 'Người dùng', path: '/internal/admin/users' },
     { icon: Building2, label: 'Doanh nghiệp', path: '/internal/admin/companies' }
@@ -18,6 +21,11 @@ const DarkSidebar = ({ role }) => {
   ];
 
   const nav = role === "admin" ? adminNav : moderatorNav;
+
+  const logout = () => {
+    handleLogout();              
+    navigate("/internal/login"); 
+  };
 
   return (
     <aside style={{
@@ -32,7 +40,9 @@ const DarkSidebar = ({ role }) => {
     }}>
       <div style={{ padding: '0 24px 32px' }}>
         <h1 style={{ ...txt(22, 700, C.white), marginBottom: 4 }}>UNIJOB</h1>
-        <p style={{ ...txt(12, 500, C.grayLight) }}>Admin Panel</p>
+        <p style={{ ...txt(12, 500, C.grayLight) }}>
+          {role === "admin" ? "Admin Panel" : "Moderator Panel"}
+        </p>
       </div>
 
       <nav style={{ flex: 1, width: '100%' }}>
@@ -79,29 +89,29 @@ const DarkSidebar = ({ role }) => {
                 </div>
                 <div>
                     <p style={{ ...txt(14, 600, C.white) }}>{role === "admin" ? "Admin User" : "Moderator"}</p>
-                    <p style={{ ...txt(12, 400, C.grayLight) }}>{role === "admin" ? "Administrator" : "Moderator"}</p>
+                    <p style={{ ...txt(12, 400, C.grayLight) }}>{role === "admin" ? "Admin Panel" : "Moderator Panel"}</p>
                 </div>
             </div>
         </div>
 
-    <div style={{ padding: "0 24px 14px" }}>
-        <button
-        style={{
-            width: "100%",
-            padding: "10px 16px",
-            borderRadius: 8,
-            border: "none",
-            background: C.red,
-            color: C.white,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: "pointer"
-        }}
-        >
-        Đăng xuất
-        </button>
-    </div>
-
+        <div style={{ padding: "0 24px 14px" }}>
+            <button
+            onClick={logout}
+            style={{
+                width: "100%",
+                padding: "10px 16px",
+                borderRadius: 8,
+                border: "none",
+                background: C.red,
+                color: C.white,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer"
+            }}
+            >
+            Đăng xuất
+            </button>
+        </div>
     </div>
     </aside>
   );
