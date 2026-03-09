@@ -2,15 +2,11 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Building2, Mail, Lock, Eye, EyeOff, Shield, Zap, CreditCard, CheckCircle } from 'lucide-react';
 import { COLORS } from '../constants/colors';
+import { useAuth } from "../context/AuthContext";
 
 const mockUsers = {
   "candidate@gmail.com": { name: "Nguyễn Văn A", password: "123456", role: "candidate" },
   "employer@gmail.com": { name: "The Coffee House", password: "123456", role: "employer" },
-};
-
-const redirectMap = {
-  candidate: "/candidate/profile",
-  employer: "/employer/company-profile",
 };
 
 const RoleSelector = ({ selectedRole, onRoleChange }) => (
@@ -84,13 +80,14 @@ const RoleSelector = ({ selectedRole, onRoleChange }) => (
   </div>
 );
 
-const CandidateLoginForm = ({ setUser }) => {
+const CandidateLoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
+  const { loginUser } = useAuth();
   const validate = () => {
     const newErrors = {};
 
@@ -129,9 +126,8 @@ const CandidateLoginForm = ({ setUser }) => {
       roleName: "Ứng viên"
     };
 
-    localStorage.setItem("user", JSON.stringify(loggedUser));
-    setUser(loggedUser);
-    navigate(redirectMap[user.role]);
+    loginUser(loggedUser);
+    navigate("/");
   };
 
   return (
@@ -280,13 +276,14 @@ const CandidateLoginForm = ({ setUser }) => {
   );
 };
 
-const EmployerLoginForm = ({ setUser }) => {
+const EmployerLoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-
+  
+  const { loginUser } = useAuth();
   const validate = () => {
     const newErrors = {};
 
@@ -322,9 +319,8 @@ const EmployerLoginForm = ({ setUser }) => {
       roleName: "Nhà tuyển dụng"
     };
 
-    localStorage.setItem("user", JSON.stringify(loggedUser));
-    setUser(loggedUser);
-    navigate(redirectMap[user.role]);
+    loginUser(loggedUser);
+    navigate("/");
   };
 
   return (
@@ -637,10 +633,7 @@ const LoginPage = ({ setUser }) => {
             <div style={{ flex: 1, height: '1px', background: COLORS.border }} />
           </div>
 
-          {selectedRole === 'candidate'
-            ? <CandidateLoginForm setUser={setUser} />
-            : <EmployerLoginForm setUser={setUser} />
-          }
+          { selectedRole === 'candidate' ? <CandidateLoginForm /> : <EmployerLoginForm /> } 
         </div>
       </main>
     </div>

@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import DarkSidebar from "../components/DarkSidebar";
-const user = JSON.parse(localStorage.getItem("user"));
+const user = JSON.parse(localStorage.getItem("internalUser"));
 
 const ModeratorLayout = ({ onLogout }) => {
   return (

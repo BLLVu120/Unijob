@@ -1,14 +1,20 @@
 import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-const ProtectedRoute = ({ allowedRoles }) => {
-  const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
+const ProtectedRoute = ({ allowedRoles, internal = false }) => {
+  const { user, internalUser, loading } = useAuth();
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
+  if (loading) return null;
+
+  const currentUser = internal ? internalUser : user;
+
+  if (!currentUser) {
+    return (
+      <Navigate to={internal ? "/internal/login" : "/login"} replace />
+    );
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
     return <Navigate to="/" replace />;
   }
 

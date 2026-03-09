@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { User, Lock, Eye, EyeOff, UserCheck } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
+import { useAuth } from "../context/AuthContext";
 const C = COLORS;
 
 const mockUsers = {
@@ -19,19 +20,27 @@ export default function InternalLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
   const navigate = useNavigate();
+  const { loginInternal } = useAuth();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const user = mockUsers[username];
+    const user = mockUsers[username.trim()];
+
     if (!user || user.password !== password) {
       alert("Sai tài khoản hoặc mật khẩu");
       return;
     }
+    
+    const loggedUser = {
+      name: user.name,
+      email: username,
+      role: user.role,
+    };
 
-    const redirectPath = redirectMap[user.role];
-    localStorage.setItem("user", JSON.stringify(user));
-    navigate(redirectPath);
+    loginInternal(loggedUser);
+    navigate(redirectMap[user.role]);
   };
 
   return (

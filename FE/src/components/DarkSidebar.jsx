@@ -7,7 +7,7 @@ const C = COLORS;
 const DarkSidebar = ({ handleLogout }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(localStorage.getItem("internalUser"));
   const role = user?.role;
 
   const adminNav = [
