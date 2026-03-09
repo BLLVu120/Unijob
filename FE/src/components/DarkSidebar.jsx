@@ -88,8 +88,8 @@ const DarkSidebar = ({ handleLogout }) => {
                     <span style={{ ...txt(14, 700, C.white) }}>{role === "admin" ? "AD" : "MD"}</span>
                 </div>
                 <div>
-                    <p style={{ ...txt(14, 600, C.white) }}>{role === "admin" ? "Admin User" : "Moderator"}</p>
-                    <p style={{ ...txt(12, 400, C.grayLight) }}>{role === "admin" ? "Admin Panel" : "Moderator Panel"}</p>
+                    <p style={{ ...txt(14, 600, C.white) }}>{role === "admin" ? "Admin User" : "Mod User"}</p>
+                    <p style={{ ...txt(12, 400, C.grayLight) }}>{role === "admin" ? "Administrator" : "Moderator"}</p>
                 </div>
             </div>
         </div>

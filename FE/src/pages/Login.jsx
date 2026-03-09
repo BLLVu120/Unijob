@@ -3,11 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { User, Building2, Mail, Lock, Eye, EyeOff, Shield, Zap, CreditCard, CheckCircle } from 'lucide-react';
 import { COLORS } from '../constants/colors';
 import { useAuth } from "../context/AuthContext";
-
-const mockUsers = {
-  "candidate@gmail.com": { name: "Nguyễn Văn A", password: "123456", role: "candidate" },
-  "employer@gmail.com": { name: "The Coffee House", password: "123456", role: "employer" },
-};
+import { loginUser as loginService } from "../services/authService";
 
 const RoleSelector = ({ selectedRole, onRoleChange }) => (
   <div style={{
@@ -107,22 +103,15 @@ const CandidateLoginForm = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    const user = mockUsers[email];
+    const user = loginService(email, password);
 
-    if (!user || user.password !== password) {
+    if (!user || user.role !== "candidate") {
       setErrors({ form: "Sai email hoặc mật khẩu" });
       return;
     }
 
-    if (user.role !== "candidate") {
-      setErrors({ form: "Tài khoản này không phải ứng viên" });
-      return;
-    }
-
     const loggedUser = {
-      name: user.name,
-      email,
-      role: user.role,
+      ...user,
       roleName: "Ứng viên"
     };
 
@@ -300,22 +289,15 @@ const EmployerLoginForm = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    const user = mockUsers[email];
+    const user = loginService(email, password);
 
-    if (!user || user.password !== password) {
+    if (!user || user.role !== "employer") {
       setErrors({ form: "Sai email hoặc mật khẩu" });
       return;
     }
 
-    if (user.role !== "employer") {
-      setErrors({ form: "Tài khoản này không phải nhà tuyển dụng" });
-      return;
-    }
-
     const loggedUser = {
-      name: user.name,
-      email,
-      role: user.role,
+      ...user,
       roleName: "Nhà tuyển dụng"
     };
 

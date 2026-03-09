@@ -42,11 +42,11 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         internalUser,
+        loading,
         loginUser,
         loginInternal,
         logoutUser,
-        logoutInternal,
-        loading
+        logoutInternal
       }}
     >
       {children}

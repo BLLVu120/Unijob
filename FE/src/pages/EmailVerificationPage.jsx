@@ -1,35 +1,29 @@
 import { useState, useRef } from 'react';
 import { Mail, RefreshCw, AlertCircle } from 'lucide-react';
 import { COLORS } from '../constants/colors';
+import { verifyEmail, getPendingUser, clearPendingUser } from "../services/authService";
+import { useNavigate } from "react-router-dom";
 
 const EmailVerificationPage = () => {
-  const userEmail = 'user@example.com';
+  const pendingUser = getPendingUser();
+  const userEmail = pendingUser?.email || "";
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
   const inputRefs = useRef([]);
-
+  const navigate = useNavigate();
   const handleChange = (index, value) => {
     if (value && !/^\d$/.test(value)) return;
-
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
     setError('');
-
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-
-    if (index === 5 && value && newCode.every(digit => digit !== '')) {
-      handleVerify(newCode.join(''));
-    }
+    if (value && index < 5) inputRefs.current[index + 1]?.focus();
+    if (index === 5 && value && newCode.every(digit => digit !== '')) handleVerify(newCode.join(''));
   };
 
   const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
+    if (e.key === 'Backspace' && !code[index] && index > 0) inputRefs.current[index - 1]?.focus();
   };
 
   const handlePaste = (e) => {
@@ -46,21 +40,19 @@ const EmailVerificationPage = () => {
 
     const lastFilledIndex = Math.min(pastedData.length - 1, 5);
     inputRefs.current[lastFilledIndex]?.focus();
-
-    if (pastedData.length === 6) {
-      handleVerify(newCode.join(''));
-    }
+    if (pastedData.length === 6) handleVerify(newCode.join(''));
   };
 
   const handleVerify = (codeString) => {
     setIsVerifying(true);
-    
     setTimeout(() => {
-      if (codeString === '123456') {
-        console.log('Verification successful!');
-      } else {
-        setError('Mã xác nhận không đúng. Vui lòng thử lại.');
-        setCode(['', '', '', '', '', '']);
+      try {
+        verifyEmail(codeString);
+        clearPendingUser();
+        navigate("/verification-success", {state: { email: pendingUser.email }});
+      } catch (err) {
+        setError(err.message);
+        setCode(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
       }
       setIsVerifying(false);
@@ -68,10 +60,10 @@ const EmailVerificationPage = () => {
   };
 
   const handleResend = () => {
-    console.log('Resend code');
     setCode(['', '', '', '', '', '']);
     setError('');
     inputRefs.current[0]?.focus();
+    alert("Mã xác nhận mới đã được gửi: 123456");
   };
 
   return (

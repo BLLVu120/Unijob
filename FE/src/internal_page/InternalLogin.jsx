@@ -4,12 +4,8 @@ import { User, Lock, Eye, EyeOff, UserCheck } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
 import { useAuth } from "../context/AuthContext";
+import { loginInternal } from "../services/authService";
 const C = COLORS;
-
-const mockUsers = {
-  "admin@gmail.com": { name: "Admin System", password: "123456", role: "admin" },
-  "moderator@gmail.com": { name: "Moderator", password: "123456", role: "moderator" },
-};
 
 const redirectMap = {
   admin: "/internal/admin/users",
@@ -20,27 +16,17 @@ export default function InternalLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+  const { loginInternal: authLoginInternal } = useAuth();
   const navigate = useNavigate();
-  const { loginInternal } = useAuth();
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    const user = mockUsers[username.trim()];
-
-    if (!user || user.password !== password) {
-      alert("Sai tài khoản hoặc mật khẩu");
-      return;
+    try {
+      const user = loginInternal(username.trim(), password);
+      authLoginInternal(user);
+      navigate(redirectMap[user.role]);
+    } catch (err) {
+      alert(err.message);
     }
-    
-    const loggedUser = {
-      name: user.name,
-      email: username,
-      role: user.role,
-    };
-
-    loginInternal(loggedUser);
-    navigate(redirectMap[user.role]);
   };
 
   return (

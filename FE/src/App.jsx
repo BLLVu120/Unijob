@@ -11,6 +11,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import EmailVerificationPage from "./pages/EmailVerificationPage";
+import VerificationConfirmationPage from "./pages/VerificationConfirmationPage";
 import CompanyPage from "./pages/CompanyPage";
 import JobPage from "./pages/JobPage";
 import JobDetailPage from "./pages/JobDetailPage";
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<EmailVerificationPage />} />
+        <Route path="/verification-success" element={<VerificationConfirmationPage />} />
 
         <Route path="/jobs" element={<JobPage />} />
         <Route path="/job-detail" element={<JobDetailPage />} />

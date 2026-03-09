@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { COLORS } from '../constants/colors';
 import { flex, txt } from '../utils/styles';
+import { useAuth } from "../context/AuthContext";
 const C = COLORS;
 
 const Card = ({ children, style = {} }) => (
@@ -68,10 +69,10 @@ const Modal = ({ open, onClose, title, children, onSave }) => {
   );
 };
 
-const InputField = ({ label, value, onChange, placeholder, disabled, type = 'text', textarea, rows = 3 }) => {
+const InputField = ({ label, value, onChange, placeholder, disabled, type = 'text', textarea, rows = 3, error, errorStyle }) => {
   const inputStyle = {
     width: '100%', padding: '11px 14px', borderRadius: 8,
-    border: `1px solid ${C.border}`, fontSize: 14, color: C.navy,
+    border: `1px solid ${error ? C.red : C.border}`, fontSize: 14, color: C.navy,
     outline: 'none', background: disabled ? C.grayBg : C.white,
     cursor: disabled ? 'not-allowed' : 'text', boxSizing: 'border-box'
   };
@@ -90,6 +91,7 @@ const InputField = ({ label, value, onChange, placeholder, disabled, type = 'tex
           style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
           disabled={disabled}
         />
+        
       ) : (
         <input
           type={type}
@@ -100,8 +102,13 @@ const InputField = ({ label, value, onChange, placeholder, disabled, type = 'tex
           disabled={disabled}
         />
       )}
+      {error && (
+        <div style={{ fontSize: 12, color: C.red, marginTop: 4, ...errorStyle }}>
+          {error}
+        </div>
+      )}
       {disabled && (
-        <p style={{ ...txt(12, 400, C.gray), marginTop: 6 }}>
+        <p style={{ ...txt(12, 400, C.gray), marginTop: 4 }}>
           Email không thể chỉnh sửa
         </p>
       )}
@@ -109,16 +116,53 @@ const InputField = ({ label, value, onChange, placeholder, disabled, type = 'tex
   );
 };
 
-export default function ProfilePage() {
-  const [editingSection, setEditingSection] = useState(null);
-  const [profile, setProfile] = useState({
-    name: 'Nguyễn Văn Anh',
-    gender: 'Nữ',
-    dob: '15/03/2002',
-    email: 'vananh@email.com',
-    phone: '0912 345 678',
-    address: '123 Đường ABC, Phường 5, Quận 1, TP. Hồ Chí Minh'
+const formatDateDisplay = (date) => {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
+};
+
+export default function ProfilePage() {
+  const { loginUser } = useAuth();
+  const [editingSection, setEditingSection] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [profile, setProfile] = useState(() => {
+  const sessionUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const users = JSON.parse(localStorage.getItem("users") || "[]");
+  const fullUser = users.find(u => u.email === sessionUser.email) || {};
+    return {
+      name: fullUser?.name || "",
+      gender: fullUser?.gender || "",
+      dob: fullUser?.birthDate || "",
+      email: fullUser?.email || "",
+      phone: fullUser?.phone || "",
+      address: fullUser?.address || ""
+    };
+  });
+  const [editProfile, setEditProfile] = useState(profile);
+
+  const validate = () => {
+    const newErrors = {};
+
+    if (!editProfile.name?.trim()) newErrors.name = "Vui lòng nhập họ và tên";
+    else if (editProfile.name.trim().length < 2) newErrors.name = "Họ và tên phải có ít nhất 2 ký tự";
+    
+    if (!editProfile.gender) newErrors.gender = "Vui lòng chọn giới tính";
+    
+    if (!editProfile.dob) newErrors.dob = "Vui lòng chọn ngày sinh";
+    
+    if (!editProfile.phone?.trim()) newErrors.phone = "Vui lòng nhập số điện thoại";
+    else if (!/^(0|\+84)[0-9]{9}$/.test(editProfile.phone.trim())) newErrors.phone = "Số điện thoại không hợp lệ";
+    
+    if (!editProfile.address?.trim()) newErrors.address = "Vui lòng nhập địa chỉ";
+    else if (editProfile.address.trim().length < 5) newErrors.address = "Địa chỉ phải có ít nhất 5 ký tự";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const [skills] = useState([
     { name: 'Kỹ năng giao tiếp & chăm sóc khách hàng', level: 90, color: C.purple },
@@ -150,12 +194,50 @@ export default function ProfilePage() {
       gpa: '3.5/4.0'
     }
   ]);
-
-  const openEdit = (section) => setEditingSection(section);
-  const closeEdit = () => setEditingSection(null);
+  const openEdit = (section) => {
+    if (section === "profile") {
+      setEditProfile(profile);
+      setErrors({});
+    }
+    setEditingSection(section);
+  };
+  const closeEdit = () => {
+    setErrors({});
+    setEditingSection(null);
+  };
   const saveEdit = () => {
-    console.log('Saving...', editingSection);
-    closeEdit();
+    if (editingSection === "profile") {
+      if (!validate()) return;
+      setProfile(editProfile);
+    }
+
+    const sessionUser = JSON.parse(localStorage.getItem("user"));
+    const users = JSON.parse(localStorage.getItem("users")) || [];
+
+    const updatedUsers = users.map((u) => {
+      if (u.email === sessionUser.email) {
+        return {
+          ...u,
+          name: editProfile.name,
+          gender: editProfile.gender,
+          birthDate: editProfile.dob,
+          phone: editProfile.phone,
+          address: editProfile.address
+        };
+      }
+      return u;
+    });
+
+    localStorage.setItem("users", JSON.stringify(updatedUsers));
+    const updatedUser = { ...sessionUser, name: editProfile.name };
+    loginUser(updatedUser);
+    setEditingSection(null);
+  };
+
+  const getInitials = (name) => {
+    if (!name) return "";
+    const parts = name.trim().split(" ");
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   return (
@@ -178,7 +260,7 @@ export default function ProfilePage() {
                     background: `linear-gradient(135deg, ${C.purple}, #a78bfa)`,
                     ...flex('center'), justifyContent: 'center'
                   }}>
-                    <span style={{ ...txt(48, 700, C.white) }}>TA</span>
+                    <span style={{ ...txt(48, 700, C.white) }}>{getInitials(profile.name)}</span>
                   </div>
                   <button style={{
                     position: 'absolute', bottom: -4, right: -4,
@@ -191,7 +273,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <h2 style={{ ...txt(26, 700), marginBottom: 6 }}>Tuyết Anh</h2>
+                  <h2 style={{ ...txt(26, 700), marginBottom: 6 }}>{profile.name}</h2>
                   <p style={{ ...txt(14, 400, C.gray) }}>
                     Hồ sơ của bạn đã được xác minh và sẵn sàng.
                   </p>
@@ -215,7 +297,7 @@ export default function ProfilePage() {
                 {[
                   { icon: User, iconBg: C.blue, label: 'HỌ VÀ TÊN', value: profile.name },
                   { icon: Heart, iconBg: C.pink, label: 'GIỚI TÍNH', value: profile.gender },
-                  { icon: Calendar, iconBg: C.purple, label: 'NGÀY SINH', value: profile.dob },
+                  { icon: Calendar, iconBg: C.purple, label: 'NGÀY SINH', value: formatDateDisplay(profile.dob) },
                   { icon: Phone, iconBg: C.cyan, label: 'SỐ ĐIỆN THOẠI', value: profile.phone },
                   { icon: Mail, iconBg: C.green, label: 'EMAIL', value: profile.email },
                   { icon: MapPin, iconBg: C.orange, label: 'ĐỊA CHỈ', value: profile.address }
@@ -368,32 +450,51 @@ export default function ProfilePage() {
       >
         <InputField
           label="Họ và tên"
-          value={profile.name}
-          onChange={v => setProfile({ ...profile, name: v })}
+          value={editProfile.name}
+          onChange={v => {
+            setEditProfile({ ...editProfile, name: v });
+            setErrors({ ...errors, name: "" });
+          }}
           placeholder="Nhập họ và tên"
+          error={errors.name}
         />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div style={{ marginBottom: 20 }}>
             <label style={{ ...txt(14, 600), display: 'block', marginBottom: 8 }}>Giới tính</label>
             <select
-              value={profile.gender}
-              onChange={e => setProfile({ ...profile, gender: e.target.value })}
+              value={editProfile.gender || ""}
+              onChange={e => {
+                setEditProfile({ ...editProfile, gender: e.target.value });
+                setErrors({ ...errors, gender: "" });
+              }}
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 8,
-                border: `1px solid ${C.border}`, fontSize: 14, outline: 'none', background: C.white
+                border: `1px solid ${errors.gender ? C.red : C.border}`, fontSize: 14, outline: 'none', appearance: 'none',
+                background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
               }}
             >
-              <option>Nam</option>
-              <option>Nữ</option>
-              <option>Khác</option>
+              <option value="">Chọn giới tính</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+              <option value="Khác">Khác</option>
             </select>
+            {errors.gender && (
+              <div style={{ fontSize: 12, color: C.red, marginTop: 4 }}>
+                {errors.gender}
+              </div>
+            )}
           </div>
-          <InputField
-            label="Ngày sinh"
-            type="date"
-            value={profile.dob}
-            onChange={v => setProfile({ ...profile, dob: v })}
-          />
+        <InputField
+          label="Ngày sinh"
+          type="date"
+          style={{ fontSize: 0 }}
+          value={editProfile.dob}
+          onChange={v => {
+            setEditProfile({ ...editProfile, dob: v });
+            setErrors({ ...errors, dob: "" });
+          }}
+          error={errors.dob}
+        />
         </div>
         <InputField
           label="Email"
@@ -403,17 +504,26 @@ export default function ProfilePage() {
         />
         <InputField
           label="Số điện thoại"
-          value={profile.phone}
-          onChange={v => setProfile({ ...profile, phone: v })}
+          value={editProfile.phone}
+          onChange={v => {
+            setEditProfile({ ...editProfile, phone: v });
+            setErrors({ ...errors, phone: "" });
+          }}
           placeholder="Nhập số điện thoại"
+          error={errors.phone}
         />
         <InputField
           label="Địa chỉ"
-          value={profile.address}
-          onChange={v => setProfile({ ...profile, address: v })}
+          value={editProfile.address}
+          onChange={v => {
+            setEditProfile({ ...editProfile, address: v });
+            setErrors({ ...errors, address: "" });
+          }}
           placeholder="Nhập địa chỉ"
           textarea
           rows={2}
+          error={errors.address}
+          errorStyle={{ marginTop: -2 }}
         />
       </Modal>
 

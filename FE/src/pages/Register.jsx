@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Link } from "react-router-dom";
 import { User, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin, Calendar, Briefcase, Shield, Zap, CreditCard, CheckCircle, IdCard } from 'lucide-react';
 import { COLORS } from '../constants/colors';
+import { setPendingUser, getUsers } from "../services/authService";
 
 const RoleSelector = ({ selectedRole, onRoleChange }) => (
   <div style={{
@@ -174,7 +176,7 @@ const FeatureItem = ({ icon: Icon, text }) => (
 );
 
 const CandidateRegistrationForm = () => {
-const navigate = useNavigate();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -195,27 +197,20 @@ const navigate = useNavigate();
     const newErrors = {};
 
     if (!formData.fullName) newErrors.fullName = 'Vui lòng nhập họ tên';
+    else if (formData.fullName.trim().length < 2) newErrors.fullName = 'Họ tên phải có ít nhất 2 ký tự';
 
-    if (!formData.phone)
-      newErrors.phone = 'Vui lòng nhập số điện thoại';
-    else if (!/^\d{9,11}$/.test(formData.phone))
-      newErrors.phone = 'Số điện thoại không hợp lệ';
+    if (!formData.phone) newErrors.phone = 'Vui lòng nhập số điện thoại';
+    else if (!/^(0|\+84)[0-9]{9}$/.test(formData.phone)) newErrors.phone = 'Số điện thoại không hợp lệ';
 
-    if (!formData.email)
-      newErrors.email = 'Vui lòng nhập email';
-    else if (!/^\S+@\S+\.\S+$/.test(formData.email))
-      newErrors.email = 'Email không hợp lệ';
+    if (!formData.email) newErrors.email = 'Vui lòng nhập email';
+    else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Email không hợp lệ';
 
-    if (!formData.password)
-      newErrors.password = 'Vui lòng nhập mật khẩu';
-    else if (formData.password.length < 8)
-      newErrors.password = 'Mật khẩu tối thiểu 8 ký tự';
+    if (!formData.password) newErrors.password = 'Vui lòng nhập mật khẩu';
+    else if (formData.password.length < 8) newErrors.password = 'Mật khẩu tối thiểu 8 ký tự';
 
-    if (formData.confirmPassword !== formData.password)
-      newErrors.confirmPassword = 'Mật khẩu không khớp';
+    if (formData.confirmPassword !== formData.password) newErrors.confirmPassword = 'Mật khẩu không khớp';
 
-    if (!formData.birthDate)
-      newErrors.birthDate = 'Vui lòng chọn ngày sinh';
+    if (!formData.birthDate) newErrors.birthDate = 'Vui lòng chọn ngày sinh';
     else {
       const birth = new Date(formData.birthDate);
       const age = new Date().getFullYear() - birth.getFullYear();
@@ -223,18 +218,15 @@ const navigate = useNavigate();
         newErrors.birthDate = 'Bạn phải từ 16 tuổi trở lên';
     }
 
-    if (!formData.gender)
-      newErrors.gender = 'Vui lòng chọn giới tính';
+    if (!formData.gender) newErrors.gender = 'Vui lòng chọn giới tính';
 
-    if (!formData.agreed)
-      newErrors.agreed = 'Bạn phải đồng ý điều khoản';
+    if (!formData.agreed) newErrors.agreed = 'Bạn phải đồng ý điều khoản';
 
-    if (!formData.address)
-      newErrors.address = 'Vui lòng nhập địa chỉ';
+    if (!formData.address) newErrors.address = 'Vui lòng nhập địa chỉ';
+    else if (formData.address.trim().length < 5) newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
 
-    if (!formData.IdCard)
-      newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD';
-    else if (formData.IdCard.length !== 12 || !/^\d+$/.test(formData.IdCard))
+    if (!formData.IdCard) newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD';
+    else if (formData.IdCard.length !== 12 || !/^\d+$/.test(formData.IdCard)) 
       newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD hợp lệ (12 chữ số)';
 
     setErrors(newErrors);
@@ -245,15 +237,32 @@ const navigate = useNavigate();
     e.preventDefault();
     if (!validate()) return;
 
-    const mockUser = {
-      email: formData.email,
-      role: 'candidate',
-      verified: false,
-      createdAt: new Date().toISOString()
-    };
+  const pendingUser = {
+    name: formData.fullName,
+    email: formData.email,
+    phone: formData.phone,
+    role: "candidate",
+    password: formData.password,
+    birthDate: formData.birthDate,
+    gender: formData.gender,
+    address: formData.address,
+    idCard: formData.IdCard,
+    createdAt: new Date().toISOString()
+  };
 
-    localStorage.setItem('pendingUser', JSON.stringify(mockUser));
-    navigate('/verify-email');
+    try {
+      const users = getUsers();
+      const emailExists = users.some(u => u.email === pendingUser.email);
+      if (emailExists) {
+        setErrors({ email: "Email đã tồn tại" });
+        return;
+      }
+      setPendingUser(pendingUser);
+      navigate("/verify-email");
+
+      } catch (err) {
+        console.error(err);
+    }
   };
 
   return (
@@ -417,9 +426,9 @@ const navigate = useNavigate();
             }}
           >
             <option value="">Chọn giới tính</option>
-            <option value="male">Nam</option>
-            <option value="female">Nữ</option>
-            <option value="other">Khác</option>
+            <option value="Nam">Nam</option>
+            <option value="Nữ">Nữ</option>
+            <option value="Khác">Khác</option>
           </select>
           {errors.gender && (
             <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
@@ -515,7 +524,7 @@ const navigate = useNavigate();
 };
 
 const EmployerRegistrationForm = () => {
-const navigate = useNavigate();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -535,43 +544,33 @@ const navigate = useNavigate();
     const validate = () => {
       const newErrors = {};
 
-      if (!formData.fullName)
-        newErrors.fullName = 'Vui lòng nhập họ tên';
+      if (!formData.fullName) newErrors.fullName = 'Vui lòng nhập họ tên';
+      else if (formData.fullName.trim().length < 2) newErrors.fullName = 'Họ tên phải có ít nhất 2 ký tự';
 
-      if (!formData.phone)
-        newErrors.phone = 'Vui lòng nhập số điện thoại';
-      else if (!/^\d{9,11}$/.test(formData.phone))
-        newErrors.phone = 'Số điện thoại không hợp lệ';
+      if (!formData.phone) newErrors.phone = 'Vui lòng nhập số điện thoại';
+      else if (!/^(0|\+84)[0-9]{9}$/.test(formData.phone)) newErrors.phone = 'Số điện thoại không hợp lệ';
 
-      if (!formData.email)
-        newErrors.email = 'Vui lòng nhập email';
-      else if (!/^\S+@\S+\.\S+$/.test(formData.email))
-        newErrors.email = 'Email không hợp lệ';
+      if (!formData.email) newErrors.email = 'Vui lòng nhập email';
+      else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Email không hợp lệ';
 
-      if (!formData.password)
-        newErrors.password = 'Vui lòng nhập mật khẩu';
-      else if (formData.password.length < 8)
-        newErrors.password = 'Mật khẩu tối thiểu 8 ký tự';
+      if (!formData.password) newErrors.password = 'Vui lòng nhập mật khẩu';
+      else if (formData.password.length < 8) newErrors.password = 'Mật khẩu tối thiểu 8 ký tự';
 
-      if (formData.confirmPassword !== formData.password)
-        newErrors.confirmPassword = 'Mật khẩu không khớp';
+      if (formData.confirmPassword !== formData.password)  newErrors.confirmPassword = 'Mật khẩu không khớp';
 
-      if (!formData.companyName)
-        newErrors.companyName = 'Vui lòng nhập tên công ty';
+      if (!formData.companyName) newErrors.companyName = 'Vui lòng nhập tên công ty';
+      else if (formData.companyName.trim().length < 3) newErrors.companyName = 'Tên công ty phải có ít nhất 3 ký tự';
 
-      if (!formData.IdCard)
-        newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD';
+      if (!formData.IdCard) newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD';
       else if (formData.IdCard.length !== 12 || !/^\d+$/.test(formData.IdCard))
         newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD hợp lệ (12 chữ số)';
 
-      if (!formData.address)
-        newErrors.address = 'Vui lòng nhập địa chỉ';
+      if (!formData.address) newErrors.address = 'Vui lòng nhập địa chỉ';
+      else if (formData.address.trim().length < 5) newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
 
-      if (!formData.taxRegistrationNumber)
-        newErrors.taxRegistrationNumber = 'Vui lòng nhập mã số thuế';
+      if (!formData.taxRegistrationNumber) newErrors.taxRegistrationNumber = 'Vui lòng nhập mã số thuế';
 
-      if (!formData.agreed)
-        newErrors.agreed = 'Bạn phải đồng ý điều khoản';
+      if (!formData.agreed) newErrors.agreed = 'Bạn phải đồng ý điều khoản';
 
       setErrors(newErrors);
       return Object.keys(newErrors).length === 0;
@@ -581,15 +580,35 @@ const navigate = useNavigate();
     e.preventDefault();
     if (!validate()) return;
 
-    const mockUser = {
+    const pendingUser = {
+      name: formData.fullName,
+      phone: formData.phone,
       email: formData.email,
-      role: 'employer',
+      password: formData.password,
+      role: "employer",
+      companyName: formData.companyName,
+      idCard: formData.IdCard,
+      address: formData.address,
+      taxRegistrationNumber: formData.taxRegistrationNumber,
       verified: false,
       createdAt: new Date().toISOString()
     };
 
-    localStorage.setItem('pendingUser', JSON.stringify(mockUser));
-    navigate('/verify-email');
+    try {
+      const users = getUsers();
+
+      const emailExists = users.some(u => u.email === pendingUser.email);
+      if (emailExists) {
+        setErrors({ email: "Email đã tồn tại" });
+        return;
+      }
+
+      setPendingUser(pendingUser);
+      navigate("/verify-email");
+
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -908,13 +927,13 @@ const RegistrationPage = () => {
             marginBottom: '32px'
           }}>
             Đã có tài khoản?{' '}
-            <a href="/login" style={{
+            <Link to="/login" style={{
               color: COLORS.blue,
               textDecoration: 'none',
               fontWeight: '600'
             }}>
               Đăng nhập ngay
-            </a>
+            </Link>
           </p>
 
           <RoleSelector 

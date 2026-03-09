@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { User, Bookmark, Send, MessageSquare, Lock, Building2, FileText, Users, CreditCard, Receipt, ShieldCheck }
 from 'lucide-react';
 import { COLORS } from '../constants/colors';
+import { useAuth } from "../context/AuthContext";
 
 const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
   const navigate = useNavigate();
@@ -144,6 +145,7 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
         <button
           onClick={() => {
             onLogout();
+            navigate("/");
             onClose();
           }}
           style={{
@@ -174,9 +176,14 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
   );
 };
 
-const Navbar = ({ isLoggedIn, isEmployer, userData, onLogout }) => {
+const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { user, logoutUser } = useAuth();
   const navigate = useNavigate();
+
+  const isLoggedIn = !!user;
+  const isEmployer = user?.role === "employer";
+  const userData = user;
 
   return (
     <nav
@@ -322,9 +329,9 @@ const Navbar = ({ isLoggedIn, isEmployer, userData, onLogout }) => {
 
           {isDropdownOpen && (
             <DropdownMenu
-              user={userData}
+              user={user}
               isEmployer={isEmployer}
-              onLogout={onLogout}
+              onLogout={logoutUser}
               onClose={() => setIsDropdownOpen(false)}
             />
           )}
