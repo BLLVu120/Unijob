@@ -22,6 +22,14 @@ export const AuthProvider = ({ children }) => {
     setUser(data);
   };
 
+  const updateUser = (data) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...data };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const loginInternal = (data) => {
     localStorage.setItem("internalUser", JSON.stringify(data));
     setInternalUser(data);
@@ -44,6 +52,7 @@ export const AuthProvider = ({ children }) => {
         internalUser,
         loading,
         loginUser,
+        updateUser,
         loginInternal,
         logoutUser,
         logoutInternal

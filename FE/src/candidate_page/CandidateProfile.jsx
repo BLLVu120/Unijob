@@ -127,6 +127,7 @@ const formatDateDisplay = (date) => {
 };
 
 export default function ProfilePage() {
+  const { updateUser } = useAuth();
   const [editingSection, setEditingSection] = useState(null);
   const [errors, setErrors] = useState({});
   const [profile, setProfile] = useState(() => {
@@ -242,6 +243,7 @@ export default function ProfilePage() {
       address: editProfile.address
     };
     setCurrentUser(updatedUser);
+    updateUser(updatedUser); 
     setEditingSection(null);
   };
 
