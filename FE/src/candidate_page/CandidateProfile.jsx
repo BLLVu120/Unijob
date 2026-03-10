@@ -6,6 +6,7 @@ import {
 import { COLORS } from '../constants/colors';
 import { flex, txt } from '../utils/styles';
 import { useAuth } from "../context/AuthContext";
+import { setCurrentUser } from "../services/authService";
 const C = COLORS;
 
 const Card = ({ children, style = {} }) => (
@@ -126,20 +127,23 @@ const formatDateDisplay = (date) => {
 };
 
 export default function ProfilePage() {
-  const { loginUser } = useAuth();
   const [editingSection, setEditingSection] = useState(null);
   const [errors, setErrors] = useState({});
   const [profile, setProfile] = useState(() => {
-  const sessionUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const users = JSON.parse(localStorage.getItem("users") || "[]");
-  const fullUser = users.find(u => u.email === sessionUser.email) || {};
+    const sessionUser = JSON.parse(localStorage.getItem("user") || "null");
+    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    const fullUser =
+      users.find(u => u.email === sessionUser?.email) ||
+      sessionUser ||
+      {};
+
     return {
-      name: fullUser?.name || "",
-      gender: fullUser?.gender || "",
-      dob: fullUser?.birthDate || "",
-      email: fullUser?.email || "",
-      phone: fullUser?.phone || "",
-      address: fullUser?.address || ""
+      name: fullUser.name || "",
+      gender: fullUser.gender || "",
+      dob: fullUser.birthDate || "",
+      email: fullUser.email || "",
+      phone: fullUser.phone || "",
+      address: fullUser.address || ""
     };
   });
   const [editProfile, setEditProfile] = useState(profile);
@@ -229,8 +233,15 @@ export default function ProfilePage() {
     });
 
     localStorage.setItem("users", JSON.stringify(updatedUsers));
-    const updatedUser = { ...sessionUser, name: editProfile.name };
-    loginUser(updatedUser);
+    const updatedUser = {
+      ...sessionUser,
+      name: editProfile.name,
+      gender: editProfile.gender,
+      birthDate: editProfile.dob,
+      phone: editProfile.phone,
+      address: editProfile.address
+    };
+    setCurrentUser(updatedUser);
     setEditingSection(null);
   };
 

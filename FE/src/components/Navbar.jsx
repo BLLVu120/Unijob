@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
 import { User, Bookmark, Send, MessageSquare, Lock, Building2, FileText, Users, CreditCard, Receipt, ShieldCheck }
 from 'lucide-react';
 import { COLORS } from '../constants/colors';
 import { useAuth } from "../context/AuthContext";
+import { useAuthGuard } from "../hooks/useAuthGuard";
+const getInitials = (name) => {
+  if (!name) return "";
+  const parts = name.trim().split(" ");
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
   const navigate = useNavigate();
@@ -70,7 +76,7 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
               border: '2px solid rgba(255, 255, 255, 0.5)'
             }}
           >
-            CH
+            {getInitials(user?.name)}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: '600', fontSize: '15px', marginBottom: '2px' }}>
@@ -184,6 +190,7 @@ const Navbar = () => {
   const isLoggedIn = !!user;
   const isEmployer = user?.role === "employer";
   const userData = user;
+  useAuthGuard();
 
   return (
     <nav
@@ -273,7 +280,7 @@ const Navbar = () => {
                 color: COLORS.white
               }}
             >
-              CH
+              {getInitials(user?.name)}
             </div>
             <div
               style={{

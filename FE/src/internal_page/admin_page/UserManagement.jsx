@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getUsers, saveUsers } from "../../services/authService";
 import {
   Users, CheckCircle, Clock, Ban, Search, Eye, Trash2,
   ShieldOff, ShieldCheck, X
@@ -7,7 +8,22 @@ import { flex, txt } from '../../utils/styles';
 import { COLORS } from '../../constants/colors';
 import { pageBtnStyle } from '../../constants/pageBtnStyle';
 const C = COLORS;
- 
+const getInitials = (name) => {
+  if (!name) return "US";
+  const parts = name.trim().split(" ");
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+const toStorageUser = ({
+  id,
+  status,
+  statusLabel,
+  statusColor,
+  statusText,
+  avatar,
+  bgColor,
+  createdDate,
+  ...user
+}) => user;
 const UserDetailModal = ({ open, onClose, user }) => {
   if (!open || !user) return null;
 
@@ -170,10 +186,17 @@ const LockConfirmModal = ({ open, onClose, onConfirm, user, isUnlock }) => {
           {isUnlock ? 'Xác nhận mở khóa' : 'Xác nhận khóa tài khoản'}
         </h2>
         <p style={{ ...txt(15, 400, C.gray), marginBottom: 24 }}>
-          {isUnlock
-            ? `Bạn có chắc chắn muốn mở khóa tài khoản của "${user.name}"? Người dùng sẽ có thể đăng nhập trở lại.`
-            : `Bạn có chắc chắn muốn khóa tài khoản của "${user.name}"? Người dùng sẽ không thể đăng nhập.`
-          }
+          {isUnlock ? (
+            <>
+              Bạn có chắc chắn muốn mở khóa tài khoản của{" "}
+              <strong>{user.name}</strong>? Người dùng sẽ có thể đăng nhập trở lại.
+            </>
+          ) : (
+            <>
+              Bạn có chắc chắn muốn khóa tài khoản của{" "}
+              <strong>{user.name}</strong>? Người dùng sẽ không thể đăng nhập.
+            </>
+          )}
         </p>
         <div style={{ ...flex('center'), justifyContent: 'center', gap: 12 }}>
           <button onClick={onClose} style={{
@@ -241,7 +264,7 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, user }) => {
         </div>
         <h2 style={{ ...txt(22, 700), marginBottom: 12 }}>Xác nhận xóa</h2>
         <p style={{ ...txt(15, 400, C.gray), marginBottom: 24 }}>
-          Bạn có chắc chắn muốn xóa tài khoản "<strong>{user.name}</strong>"?
+          Bạn có chắc chắn muốn xóa tài khoản <strong>{user.name}</strong>?
           Hành động này không thể hoàn tác.
         </p>
         <div style={{ ...flex('center'), justifyContent: 'center', gap: 12 }}>
@@ -275,80 +298,50 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, user }) => {
   );
 };
 
+const formatUser = (u, index) => {
+  const status = (u.blocked ?? false)
+    ? "blocked"
+    : (u.verified ?? false)
+    ? "verified"
+    : "pending";
+
+  const statusMap = {
+    verified: { label: "Đã xác thực", bg: C.greenBg, text: C.green },
+    pending: { label: "Chờ xác thực", bg: C.yellowBg, text: "#f59e0b" },
+    blocked: { label: "Đã khóa", bg: C.redBg, text: C.red }
+  };
+
+  return {
+    ...u,
+    id: index + 1,
+    name: u.name || "Chưa có tên",
+    phone: u.phone || "-",
+
+    status,
+    statusLabel: statusMap[status].label,
+    statusColor: statusMap[status].bg,
+    statusText: statusMap[status].text,
+
+    createdDate: u.createdAt
+      ? new Date(u.createdAt).toLocaleDateString("vi-VN")
+      : "-",
+
+    lastLogin: u.lastLogin
+      ? new Date(u.lastLogin).toLocaleString("vi-VN")
+      : "-",
+
+    avatar: getInitials(u.name),
+    bgColor: "#7c3aed"
+  };
+};
+
 export default function UserManagementPage() {
-  const users = [
-    {
-      id: 1,
-      name: 'Nguyễn Văn Anh',
-      email: 'vananh@email.com',
-      phone: '0912 345 678',
-      status: 'verified',
-      statusLabel: 'Đã xác thực',
-      statusColor: C.greenBg,
-      statusText: C.green,
-      createdDate: '15/10/2025',
-      lastLogin: 'Đang online',
-      avatar: 'VA',
-      bgColor: '#7c3aed'
-    },
-    {
-      id: 2,
-      name: 'Lê Minh Hoàng',
-      email: 'minhhoang@email.com',
-      phone: '0923 456 789',
-      status: 'pending',
-      statusLabel: 'Chờ xác thực',
-      statusColor: C.yellowBg,
-      statusText: '#f59e0b',
-      createdDate: '10/10/2025',
-      lastLogin: '3 ngày trước',
-      avatar: 'MH',
-      bgColor: '#7c3aed'
-    },
-    {
-      id: 3,
-      name: 'Phạm Hồng',
-      email: 'phamhong@email.com',
-      phone: '0934 567 890',
-      status: 'blocked',
-      statusLabel: 'Đã khóa',
-      statusColor: C.redBg,
-      statusText: C.red,
-      createdDate: '10/10/2025',
-      lastLogin: '3 ngày trước',
-      avatar: 'PH',
-      bgColor: '#7c3aed'
-    },
-    {
-      id: 4,
-      name: 'Nguyễn Văn Anh',
-      email: 'vananh@email.com',
-      phone: '0912 345 678',
-      status: 'verified',
-      statusLabel: 'Đã xác thực',
-      statusColor: C.greenBg,
-      statusText: C.green,
-      createdDate: '15/10/2025',
-      lastLogin: '2 giờ trước',
-      avatar: 'VA',
-      bgColor: '#7c3aed'
-    },
-    {
-      id: 5,
-      name: 'Lê Minh Hoàng',
-      email: 'minhhoang@email.com',
-      phone: '0923 456 789',
-      status: 'pending',
-      statusLabel: 'Chờ xác thực',
-      statusColor: C.yellowBg,
-      statusText: '#f59e0b',
-      createdDate: '10/10/2025',
-      lastLogin: '3 ngày trước',
-      avatar: 'MH',
-      bgColor: '#7c3aed'
-    }
-  ];
+  const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  useEffect(() => {
+    const data = getUsers();
+    setUsers(data.map(formatUser));
+  }, []);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -362,12 +355,12 @@ export default function UserManagementPage() {
   const end = start + rowsPerPage;
   const currentUsers = users.slice(start, end);
 
-  const stats = [
-    { icon: Users, label: 'Tổng người dùng', value: 5 },
-    { icon: CheckCircle, label: 'Đã xác thực', value: 2 },
-    { icon: Clock, label: 'Chờ xác thực', value: 2 },
-    { icon: Ban, label: 'Đã khóa', value: 1 }
-  ];
+const stats = [
+  { icon: Users, label: "Tổng người dùng", value: users.length },
+  { icon: CheckCircle, label: "Đã xác thực", value: users.filter(u => u.status === "verified").length },
+  { icon: Clock, label: "Chờ xác thực", value: users.filter(u => u.status === "pending").length },
+  { icon: Ban, label: "Đã khóa", value: users.filter(u => u.status === "blocked").length }
+];
 
   const displayUsers = users;
 
@@ -773,7 +766,21 @@ export default function UserManagementPage() {
           setSelectedUser(null);
         }}
         onConfirm={() => {
-          console.log(isUnlockAction ? 'Unlocked' : 'Locked', selectedUser);
+          const storageUsers = getUsers();
+          const updatedUsers = storageUsers.map(u => {
+            if (u.email === selectedUser.email) {
+              const isBlocked = !(u.blocked ?? false);
+              return {
+                ...u,
+                blocked: isBlocked,
+                verified: !isBlocked
+              };
+            }
+            return u;
+          });
+
+          saveUsers(updatedUsers);
+          setUsers(updatedUsers.map(formatUser));
           setLockModalOpen(false);
           setSelectedUser(null);
         }}
@@ -788,7 +795,12 @@ export default function UserManagementPage() {
           setSelectedUser(null);
         }}
         onConfirm={() => {
-          console.log('Deleted', selectedUser);
+          const storageUsers = getUsers();
+          const updated = storageUsers.filter(
+            u => u.email !== selectedUser.email
+          );
+          saveUsers(updated);
+          setUsers(updated.map(formatUser));
           setDeleteModalOpen(false);
           setSelectedUser(null);
         }}

@@ -24,9 +24,16 @@ export const registerUser = (user) => {
   const emailExists = users.some(u => u.email === user.email);
   if (emailExists) throw new Error("Email đã tồn tại");
 
-  users.push(user);
+  const newUser = {
+    ...user,
+    verified: false,
+    blocked: false,
+    createdAt: new Date().toISOString()
+  };
+
+  users.push(newUser);
   saveUsers(users);
-  return user;
+  return newUser;
 };
 
 export const verifyEmail = (code) => {
@@ -56,14 +63,29 @@ export const verifyEmail = (code) => {
 
 export const loginUser = (email, password) => {
   const users = getUsers();
-  const user = users.find(
+
+  const index = users.findIndex(
     u => u.email === email && u.password === password
   );
 
-  if (!user) throw new Error("Sai email hoặc mật khẩu");
+  if (index === -1) throw new Error("Sai email hoặc mật khẩu");
+
+  const user = users[index];
+
   if (!user.verified) throw new Error("Tài khoản chưa xác thực email");
-  setCurrentUser(user);
-  return user;
+  if (user.blocked === true) throw new Error("Tài khoản đã bị khóa");
+
+  const updatedUser = {
+    ...users[index], 
+    lastLogin: new Date().toISOString()
+  };
+
+  users[index] = updatedUser;
+
+  saveUsers(users);
+  setCurrentUser(updatedUser);
+
+  return updatedUser;
 };
 
 export const getCurrentUser = () => {
