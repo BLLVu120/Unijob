@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Eye, EyeOff, Shield, Key, CheckCircle2 } from 'lucide-react';
 import { COLORS } from '../constants/colors';
 import { flex, txt } from '../utils/styles';
+import { getCurrentUser, updateUser } from "../services/authService";
 
 const C = COLORS;
 
@@ -15,7 +16,7 @@ const PasswordField = ({ label, value, onChange, placeholder }) => {
       </label>
       <div style={{ position: 'relative' }}>
         <input
-          type={show ? 'text' : 'password'}
+          type={show ? 'password' : 'text'}
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
@@ -82,8 +83,46 @@ export default function ChangePasswordPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Changing password...', passwords);
-    // Password validation and API call would go here
+
+    try {
+      const currentUser = getCurrentUser();
+
+      if (!currentUser) {
+        alert("Bạn chưa đăng nhập");
+        return;
+      }
+
+      if (passwords.current !== currentUser.password) {
+        alert("Mật khẩu hiện tại không đúng");
+        return;
+      }
+
+      if (passwords.new !== passwords.confirm) {
+        alert("Mật khẩu xác nhận không khớp");
+        return;
+      }
+
+      if (passwords.new.length < 6) {
+        alert("Mật khẩu mới phải ít nhất 6 ký tự");
+        return;
+      }
+
+      const updatedUser = {
+        ...currentUser,
+        password: passwords.new
+      };
+
+      updateUser(updatedUser);
+      alert("Đổi mật khẩu thành công");
+      setPasswords({
+        current: "",
+        new: "",
+        confirm: ""
+      });
+
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleReset = () => {

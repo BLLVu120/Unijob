@@ -189,7 +189,7 @@ const CandidateLoginForm = () => {
             pointerEvents: 'none'
           }} />
           <input
-            type={showPassword ? 'text' : 'password'}
+            type={showPassword ? 'password' : 'text'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mật khẩu"

@@ -136,7 +136,7 @@ export default function InternalLoginPage() {
                 <Lock size={18} color={C.gray} />
               </div>
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? 'password' : 'text'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mật khẩu"

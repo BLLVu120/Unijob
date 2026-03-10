@@ -100,7 +100,7 @@ const InputField = ({ label, type = 'text', placeholder, icon: Icon, required, v
         }} />
       )}
       <input
-        type={showPasswordToggle ? (showPassword ? 'text' : 'password') : type}
+        type={showPasswordToggle ? (showPassword ? 'password' : 'text') : type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -422,7 +422,8 @@ const CandidateRegistrationForm = () => {
               color: COLORS.navy,
               outline: 'none',
               boxSizing: 'border-box',
-              background: COLORS.white
+              appearance: 'none',
+              background: `${COLORS.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
             }}
           >
             <option value="">Chọn giới tính</option>
