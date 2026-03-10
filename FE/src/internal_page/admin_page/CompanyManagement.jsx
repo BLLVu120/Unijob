@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Building2, CheckCircle, Clock, Ban, Search, Eye, Trash2,
   ShieldOff, ShieldCheck, X, FileText
@@ -6,7 +6,22 @@ import {
 import { flex, txt } from '../../utils/styles';
 import { COLORS } from '../../constants/colors';
 import { pageBtnStyle } from '../../constants/pageBtnStyle';
+import { getUsers, saveUsers } from "../../services/authService";
+import { getInitials, formatDate } from '../../utils/textUtils';
+import Toast from "../../components/Toast";
 const C = COLORS;
+
+const industries = [
+  'Công nghệ thông tin',
+  'Marketing',
+  'Thiết kế',
+  'Hành chính',
+  'Bán hàng',
+  'F&B - Nhà hàng',
+  'Giao hàng',
+  'Gia sư - Dạy học',
+  'Khác'
+];
 
 const CompanyDetailModal = ({ open, onClose, company, onApprove, onReject }) => {
   const [note, setNote] = useState('');
@@ -346,10 +361,17 @@ const LockConfirmModal = ({ open, onClose, onConfirm, company, isUnlock }) => {
           {isUnlock ? 'Xác nhận mở khóa' : 'Xác nhận khóa doanh nghiệp'}
         </h2>
         <p style={{ ...txt(15, 400, C.gray), marginBottom: 24 }}>
-          {isUnlock
-            ? `Bạn có chắc chắn muốn mở khóa doanh nghiệp "${company.name}"? Doanh nghiệp sẽ có thể hoạt động trở lại.`
-            : `Bạn có chắc chắn muốn khóa doanh nghiệp "${company.name}"? Doanh nghiệp sẽ không thể đăng tin tuyển dụng.`
-          }
+          {isUnlock ? (
+            <>
+              Bạn có chắc chắn muốn mở khóa doanh nghiệp{" "}
+              <strong>{company.name}</strong>? Doanh nghiệp sẽ có thể hoạt động trở lại.
+            </>
+          ) : (
+            <>
+              Bạn có chắc chắn muốn khóa doanh nghiệp{" "}
+              <strong>{company.name}</strong>? Doanh nghiệp sẽ không thể đăng tin tuyển dụng.
+            </>
+          )}
         </p>
         <div style={{ ...flex('center'), justifyContent: 'center', gap: 12 }}>
           <button onClick={onClose} style={{
@@ -453,98 +475,40 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, company }) => {
 
 
 export default function CompanyManagementPage() {
-    const companies = [
-    {
-        id: 1,
-        name: 'The Coffee House',
-        taxId: 'MST: 0123456789',
-        industry: 'F&B',
-        jobs: '15 việc',
-        status: 'verified',
-        statusLabel: 'Đã xác thực',
-        statusColor: C.greenBg,
-        statusText: C.green,
-        avatar: 'CH',
-        bgColor: '#7c3aed',
-        registeredDate: '12/10/2025',
-        size: '1000+ nhân viên',
-        website: 'www.thecoffeehouse.com',
-        address: '86-88 Cao Thắng, Phường 04, Quận 3, TP.HCM'
-    },
-    {
-        id: 2,
-        name: 'Fashion Store ABC',
-        taxId: 'MST: 0987654321',
-        industry: 'Bán lẻ',
-        jobs: '0 việc',
-        status: 'pending',
-        statusLabel: 'Chờ xác thực',
-        statusColor: C.yellowBg,
-        statusText: '#f59e0b',
-        avatar: 'SA',
-        bgColor: '#7c3aed',
-        registeredDate: '15/10/2025',
-        size: '50-100 nhân viên',
-        website: 'www.fashionstore.com',
-        address: '123 Nguyễn Huệ, Quận 1, TP.HCM'
-    },
-    {
-        id: 3,
-        name: 'TutorVN Education',
-        taxId: 'MST: 0110222333',
-        industry: 'Giáo dục',
-        jobs: '12 việc',
-        status: 'verified',
-        statusLabel: 'Đã xác thực',
-        statusColor: C.greenBg,
-        statusText: C.green,
-        avatar: 'TE',
-        bgColor: '#7c3aed',
-        registeredDate: '08/10/2025',
-        size: '100-500 nhân viên',
-        website: 'www.tutorvn.com',
-        address: '456 Lê Lợi, Quận 1, TP.HCM'
-    },
-    {
-        id: 4,
-        name: 'Digital Agency XYZ',
-        taxId: 'MST: 0444555666',
-        industry: 'Marketing',
-        jobs: '6 việc',
-        status: 'verified',
-        statusLabel: 'Đã xác thực',
-        statusColor: C.greenBg,
-        statusText: C.green,
-        avatar: 'AX',
-        bgColor: '#7c3aed',
-        registeredDate: '20/09/2025',
-        size: '10-50 nhân viên',
-        website: 'www.digitalxyz.com',
-        address: '789 Điện Biên Phủ, Quận 3, TP.HCM'
-    },
-    {
-        id: 5,
-        name: 'FastDelivery Co.',
-        taxId: 'MST: 0777888999',
-        industry: 'Vận chuyển',
-        jobs: '0 việc',
-        status: 'rejected',
-        statusLabel: 'Bị từ chối',
-        statusColor: C.redBg,
-        statusText: C.red,
-        avatar: 'AX',
-        bgColor: '#7c3aed',
-        registeredDate: '05/10/2025',
-        size: '500-1000 nhân viên',
-        website: 'www.fastdelivery.com',
-        address: '321 Trần Hưng Đạo, Quận 5, TP.HCM'
-    }
-    ];
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [toast, setToast] = useState(null);
+  const [companies, setCompanies] = useState([]);
+  useEffect(() => {
+    const users = getUsers();
+    const employers = users
+      .filter(u => u.role === "employer")
+      .map((u, index) => ({
+        id: index + 1,
+        email: u.email,
+        name: u.companyName || u.name,
+        taxId: u.taxId || "-",
+        industry: u.industry || "-",
+        jobs: "0 việc",
+        status: u.blocked ? "blocked" : u.verified ? "verified" : "pending",
+        statusLabel: u.blocked ? "Đã khóa" : u.verified ? "Đã xác thực" : "Chờ xác thực",
+        statusColor: u.blocked ? C.redBg : u.verified ? C.greenBg : C.yellowBg,
+        statusText: u.blocked ? C.red : u.verified ? C.green : "#f59e0b",
+        avatar: getInitials(u.companyName || u.name),
+        bgColor: "#7c3aed",
+        registeredDate: u.createdAt ? formatDate(u.createdAt) : "-",
+        size: u.companySize || "-",
+        website: u.website || "-",
+        address: u.address || "-"
+      }));
+    setCompanies(employers);
+  }, []);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [isUnlockAction, setIsUnlockAction] = useState(false);
+  const [industryFilter, setIndustryFilter] = useState("all");
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
   const total = companies.length;
@@ -554,13 +518,21 @@ export default function CompanyManagementPage() {
   const currentCompanies = companies.slice(start, end);
 
   const stats = [
-    { icon: Building2, label: 'Tổng doanh nghiệp', value: 5234 },
-    { icon: CheckCircle, label: 'Đã xác thực', value: 4890 },
-    { icon: Clock, label: 'Chờ xác thực', value: 234 },
-    { icon: Ban, label: 'Bị từ chối', value: 110 }
+    { icon: Building2, label: 'Tổng doanh nghiệp', value: companies.length },
+    { icon: CheckCircle, label: 'Đã xác thực', value: companies.filter(c => c.status === 'verified').length },
+    { icon: Clock, label: 'Chờ xác thực', value: companies.filter(c => c.status === 'pending').length },
+    { icon: Ban, label: 'Bị từ chối', value: companies.filter(c => c.status === 'rejected').length }
   ];
 
-  const displayCompanies = companies;
+  const displayCompanies = companies.filter(company => {
+    const matchSearch =
+      company.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.taxId?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchStatus = statusFilter === "all" || company.status === statusFilter;
+    const matchIndustry = industryFilter === "all" || company.industry === industryFilter;
+    return matchSearch && matchStatus && matchIndustry;
+  });
 
   const handleLockCompany = (company) => {
     setSelectedCompany(company);
@@ -584,6 +556,14 @@ export default function CompanyManagementPage() {
       background: C.grayBg,
       minHeight: '100vh'
     }}>
+
+    {toast && (
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(null)}
+      />
+    )}
       <main style={{ marginLeft: 220, padding: '40px 48px' }}>
         <h1 style={{ ...txt(32, 700), marginBottom: 32 }}>Doanh nghiệp</h1>
         <div style={{
@@ -641,6 +621,8 @@ export default function CompanyManagementPage() {
             <Search size={18} color={C.gray} />
             <input
               placeholder="Tìm kiếm theo tên công ty, mã số thuế..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 border: 'none',
                 outline: 'none',
@@ -650,18 +632,25 @@ export default function CompanyManagementPage() {
               }}
             />
           </div>
-          <select style={{
-            padding: '10px 14px',
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            fontSize: 14,
-            outline: 'none',
+          <select 
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              padding: '10px 14px',
+              borderRadius: 8,
+              border: `1px solid ${C.border}`,
+              fontSize: 14,
+              outline: 'none',
             cursor: 'pointer',
             minWidth: 180,
             appearance: 'none',
             background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
           }}>
-            <option>Tất cả trạng thái</option>
+            <option value="all">Tất cả trạng thái</option>
+            <option value="verified">Đã xác thực</option>
+            <option value="pending">Chờ xác thực</option>
+            <option value="rejected">Bị từ chối</option>
+            <option value="blocked">Đã khóa</option>
           </select>
           <select style={{
             padding: '10px 14px',
@@ -675,19 +664,11 @@ export default function CompanyManagementPage() {
             background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
           }}>
             <option>Tất cả ngành nghề</option>
-          </select>
-          <select style={{
-            padding: '10px 14px',
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            fontSize: 14,
-            outline: 'none',
-            cursor: 'pointer',
-            minWidth: 150,
-            appearance: 'none',
-            background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
-          }}>
-            <option>Sắp xếp</option>
+            {industries.map((industry) => (
+              <option key={industry} value={industry}>
+                {industry}
+              </option>
+            ))}
           </select>
           <button style={{
             padding: '10px 32px',
@@ -896,7 +877,7 @@ export default function CompanyManagementPage() {
                 maxWidth: 400,
                 margin: '0 auto 24px'
               }}>
-                Danh sách doanh nghiệp sẽ xuất hiện tại đây khi có công ty đăng ký tài khoản mới.
+                Danh sách doanh nghiệp sẽ xuất hiện tại đây.
               </p>
             </div>
           )}
@@ -922,7 +903,41 @@ export default function CompanyManagementPage() {
           setSelectedCompany(null);
         }}
         onConfirm={() => {
-          console.log('Lock toggled', selectedCompany);
+          const users = getUsers();
+          const updatedUsers = users.map(u => {
+            if (u.email === selectedCompany.email) {
+              const blocked = !u.blocked;
+              return {
+                ...u,
+                blocked,
+              };
+            }
+            return u;
+          });
+          saveUsers(updatedUsers);
+
+          const employers = updatedUsers
+            .filter(u => u.role === "employer")
+            .map((u, index) => ({
+              id: index + 1,
+              name: u.companyName || u.name,
+              taxId: u.taxId || "-",
+              industry: u.industry || "-",
+              jobs: "0 việc",
+              status: u.blocked ? "blocked" : u.verified ? "verified" : "pending",
+              statusLabel: u.blocked ? "Đã khóa" : u.verified ? "Đã xác thực" : "Chờ xác thực",
+              statusColor: u.blocked ? C.redBg : u.verified ? C.greenBg : C.yellowBg,
+              statusText: u.blocked ? C.red : u.verified ? C.green : "#f59e0b",
+              avatar: getInitials(u.companyName || u.name),
+              bgColor: "#7c3aed",
+              registeredDate: u.createdAt ? formatDate(u.createdAt) : "-",
+              size: u.companySize || "-",
+              website: u.website || "-",
+              address: u.address || "-"
+            }));
+
+          setCompanies(employers);
+          setToast({ message: isUnlockAction ? "Đã mở khóa doanh nghiệp" : "Đã khóa doanh nghiệp", type: "success" });
           setLockModalOpen(false);
           setSelectedCompany(null);
         }}
@@ -937,7 +952,35 @@ export default function CompanyManagementPage() {
           setSelectedCompany(null);
         }}
         onConfirm={() => {
-          console.log('Deleted', selectedCompany);
+          const users = getUsers();
+          const updated = users.filter(u => {
+            if (u.role !== "employer") return true;
+            return u.email !== selectedCompany.email;
+          });
+
+          saveUsers(updated);
+          const employers = updated
+            .filter(u => u.role === "employer")
+            .map((u, index) => ({
+              id: index + 1,
+              name: u.companyName || u.name,
+              taxId: u.taxId || "-",
+              industry: u.industry || "-",
+              jobs: "0 việc",
+              status: u.verified ? "verified" : "pending",
+              statusLabel: u.verified ? "Đã xác thực" : "Chờ xác thực",
+              statusColor: u.verified ? C.greenBg : C.yellowBg,
+              statusText: u.verified ? C.green : "#f59e0b",
+              avatar: getInitials(u.companyName || u.name),
+              bgColor: "#7c3aed",
+              registeredDate: u.createdAt ? formatDate(u.createdAt) : "-",
+              size: u.companySize || "-",
+              website: u.website || "-",
+              address: u.address || "-"
+            }));
+
+          setCompanies(employers);
+          setToast({ message: "Đã xóa doanh nghiệp thành công", type: "success" });
           setDeleteModalOpen(false);
           setSelectedCompany(null);
         }}

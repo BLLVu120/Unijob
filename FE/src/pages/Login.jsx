@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Building2, Mail, Lock, Eye, EyeOff, Shield, Zap, CreditCard, CheckCircle } from 'lucide-react';
+import Toast from '../components/Toast';
 import { COLORS } from '../constants/colors';
 import { useAuth } from "../context/AuthContext";
 import { loginUser as loginService } from "../services/authService";
@@ -76,7 +77,7 @@ const RoleSelector = ({ selectedRole, onRoleChange }) => (
   </div>
 );
 
-const CandidateLoginForm = () => {
+const CandidateLoginForm = ({ setToast }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -103,169 +104,180 @@ const CandidateLoginForm = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    const user = loginService(email, password);
+    try {
+      const user = loginService(email, password);
 
-    if (!user || user.role !== "candidate") {
-      setErrors({ form: "Sai email hoặc mật khẩu" });
-      return;
+      if (user.role !== "candidate") {
+        setToast({
+          message: "Tài khoản không phải ứng viên",
+          type: "error"
+        });
+        return;
+      }
+
+      const loggedUser = {
+        ...user,
+        roleName: "Ứng viên"
+      };
+
+      loginUser(loggedUser);
+      navigate("/");
+
+    } catch (error) {
+      setToast({
+        message: error.message,
+        type: "error"
+      });
     }
-
-    const loggedUser = {
-      ...user,
-      roleName: "Ứng viên"
-    };
-
-    loginUser(loggedUser);
-    navigate("/");
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{
-          display: 'block',
-          fontSize: '14px',
-          fontWeight: '600',
-          color: COLORS.navy,
-          marginBottom: '8px'
-        }}>
-          E-mail
-        </label>
-        <div style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center'
-        }}>
-          <Mail size={18} color={COLORS.gray} style={{
-            position: 'absolute',
-            left: '14px',
-            pointerEvents: 'none'
-          }} />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="E-mail"
-            style={{
-              width: '100%',
-              padding: '12px 12px 12px 44px',
-              borderRadius: '8px',
-              border: `1px solid ${COLORS.border}`,
-              fontSize: '14px',
-              color: COLORS.navy,
-              outline: 'none',
-              transition: 'border-color 0.2s',
-              boxSizing: 'border-box'
-            }}
-            onFocus={e => e.target.style.borderColor = COLORS.blue}
-            onBlur={e => e.target.style.borderColor = COLORS.border}
-          />
+      <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: COLORS.navy,
+            marginBottom: '8px'
+          }}>
+            E-mail
+          </label>
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Mail size={18} color={COLORS.gray} style={{
+              position: 'absolute',
+              left: '14px',
+              pointerEvents: 'none'
+            }} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="E-mail"
+              style={{
+                width: '100%',
+                padding: '12px 12px 12px 44px',
+                borderRadius: '8px',
+                border: `1px solid ${COLORS.border}`,
+                fontSize: '14px',
+                color: COLORS.navy,
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box'
+              }}
+              onFocus={e => e.target.style.borderColor = COLORS.blue}
+              onBlur={e => e.target.style.borderColor = COLORS.border}
+            />
+          </div>
+            {errors.email && (
+              <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
+                {errors.email}
+              </div>
+            )}
         </div>
-          {errors.email && (
+
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
+            fontWeight: '600',
+            color: COLORS.navy,
+            marginBottom: '8px'
+          }}>
+            Mật khẩu
+          </label>
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center'
+          }}>
+            <Lock size={18} color={COLORS.gray} style={{
+              position: 'absolute',
+              left: '14px',
+              pointerEvents: 'none'
+            }} />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mật khẩu"
+              style={{
+                width: '100%',
+                padding: '12px 44px 12px 44px',
+                borderRadius: '8px',
+                border: `1px solid ${COLORS.border}`,
+                fontSize: '14px',
+                color: COLORS.navy,
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                boxSizing: 'border-box'
+              }}
+              onFocus={e => e.target.style.borderColor = COLORS.blue}
+              onBlur={e => e.target.style.borderColor = COLORS.border}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '14px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              {showPassword ? (
+                <Eye size={18} color={COLORS.gray} />
+              ) : (
+                <EyeOff size={18} color={COLORS.gray} />
+              )}
+            </button>
+          </div>
+          {errors.password && (
             <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
-              {errors.email}
+              {errors.password}
             </div>
           )}
-      </div>
-
-      <div style={{ marginBottom: '24px' }}>
-        <label style={{
-          display: 'block',
-          fontSize: '14px',
-          fontWeight: '600',
-          color: COLORS.navy,
-          marginBottom: '8px'
-        }}>
-          Mật khẩu
-        </label>
-        <div style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center'
-        }}>
-          <Lock size={18} color={COLORS.gray} style={{
-            position: 'absolute',
-            left: '14px',
-            pointerEvents: 'none'
-          }} />
-          <input
-            type={showPassword ? 'password' : 'text'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Mật khẩu"
-            style={{
-              width: '100%',
-              padding: '12px 44px 12px 44px',
-              borderRadius: '8px',
-              border: `1px solid ${COLORS.border}`,
-              fontSize: '14px',
-              color: COLORS.navy,
-              outline: 'none',
-              transition: 'border-color 0.2s',
-              boxSizing: 'border-box'
-            }}
-            onFocus={e => e.target.style.borderColor = COLORS.blue}
-            onBlur={e => e.target.style.borderColor = COLORS.border}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: 'absolute',
-              right: '14px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-              display: 'flex',
-              alignItems: 'center'
-            }}
-          >
-            {showPassword ? (
-              <EyeOff size={18} color={COLORS.gray} />
-            ) : (
-              <Eye size={18} color={COLORS.gray} />
-            )}
-          </button>
         </div>
-        {errors.password && (
-          <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
-            {errors.password}
-          </div>
-        )}
-      </div>
 
-      <button
-        type="submit"
-        style={{
-          width: '100%',
-          padding: '14px',
-          borderRadius: '8px',
-          border: 'none',
-          background: `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`,
-          color: COLORS.white,
-          fontSize: '15px',
-          fontWeight: '600',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          boxShadow: '0 4px 12px rgba(139, 127, 214, 0.3)'
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 127, 214, 0.4)';
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 127, 214, 0.3)';
-        }}
-      >
-        Đăng nhập
-      </button>
-    </form>
+        <button
+          type="submit"
+          style={{
+            width: '100%',
+            padding: '14px',
+            borderRadius: '8px',
+            border: 'none',
+            background: `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`,
+            color: COLORS.white,
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: '0 4px 12px rgba(139, 127, 214, 0.3)'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 127, 214, 0.4)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 127, 214, 0.3)';
+          }}
+        >
+          Đăng nhập
+        </button>
+      </form>
   );
 };
 
-const EmployerLoginForm = () => {
+const EmployerLoginForm = ({ setToast }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -289,28 +301,39 @@ const EmployerLoginForm = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    const user = loginService(email, password);
+    try {
+      const user = loginService(email, password);
 
-    if (!user || user.role !== "employer") {
-      setErrors({ form: "Sai email hoặc mật khẩu" });
-      return;
+      if (user.role !== "employer") {
+        setToast({
+          message: "Tài khoản không phải nhà tuyển dụng",
+          type: "error"
+        });
+        return;
+      }
+
+      const loggedUser = {
+        ...user,
+        roleName: "Nhà tuyển dụng"
+      };
+
+      loginUser(loggedUser);
+      navigate("/");
+
+    } catch (error) {
+      setToast({
+        message: error.message,
+        type: "error"
+      });
     }
-
-    const loggedUser = {
-      ...user,
-      roleName: "Nhà tuyển dụng"
-    };
-
-    loginUser(loggedUser);
-    navigate("/");
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{
-          display: 'block',
-          fontSize: '14px',
+      <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '14px',
           fontWeight: '600',
           color: COLORS.navy,
           marginBottom: '8px'
@@ -408,9 +431,9 @@ const EmployerLoginForm = () => {
             }}
           >
             {showPassword ? (
-              <EyeOff size={18} color={COLORS.gray} />
-            ) : (
               <Eye size={18} color={COLORS.gray} />
+            ) : (
+              <EyeOff size={18} color={COLORS.gray} />
             )}
           </button>
         </div>
@@ -484,6 +507,7 @@ const FeatureItem = ({ icon: Icon, text }) => (
 
 const LoginPage = ({ setUser }) => {
   const [selectedRole, setSelectedRole] = useState('candidate');
+  const [toast, setToast] = useState(null);
 
   const candidateFeatures = [
     { icon: CheckCircle, text: '10.000+ việc làm part-time được xác thực' },
@@ -518,6 +542,14 @@ const LoginPage = ({ setUser }) => {
       minHeight: '100vh',
       background: COLORS.cream
     }}>
+
+    {toast && (
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(null)}
+      />
+    )}
       
       <main style={{
         display: 'flex',
@@ -615,7 +647,10 @@ const LoginPage = ({ setUser }) => {
             <div style={{ flex: 1, height: '1px', background: COLORS.border }} />
           </div>
 
-          { selectedRole === 'candidate' ? <CandidateLoginForm /> : <EmployerLoginForm /> } 
+          {selectedRole === 'candidate'
+            ? <CandidateLoginForm setToast={setToast} />
+            : <EmployerLoginForm setToast={setToast} />
+          }
         </div>
       </main>
     </div>

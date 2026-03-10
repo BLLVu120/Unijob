@@ -100,7 +100,7 @@ const InputField = ({ label, type = 'text', placeholder, icon: Icon, required, v
         }} />
       )}
       <input
-        type={showPasswordToggle ? (showPassword ? 'password' : 'text') : type}
+        type={showPasswordToggle ? (showPassword ? 'text' : 'password') : type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -134,9 +134,9 @@ const InputField = ({ label, type = 'text', placeholder, icon: Icon, required, v
           }}
         >
           {showPassword ? (
-            <EyeOff size={18} color={COLORS.gray} />
-          ) : (
             <Eye size={18} color={COLORS.gray} />
+          ) : (
+            <EyeOff size={18} color={COLORS.gray} />
           )}
         </button>
       )}

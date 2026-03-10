@@ -5,6 +5,7 @@ import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
 import { useAuth } from "../context/AuthContext";
 import { loginInternal } from "../services/authService";
+import Toast from "../components/Toast";
 const C = COLORS;
 
 const redirectMap = {
@@ -16,6 +17,7 @@ export default function InternalLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [toast, setToast] = useState(null);
   const { loginInternal: authLoginInternal } = useAuth();
   const navigate = useNavigate();
   const handleSubmit = (e) => {
@@ -24,8 +26,12 @@ export default function InternalLoginPage() {
       const user = loginInternal(username.trim(), password);
       authLoginInternal(user);
       navigate(redirectMap[user.role]);
-    } catch (err) {
-      alert(err.message);
+    } 
+    catch (err) {
+      setToast({
+        message: err.message,
+        type: "error"
+      });
     }
   };
 
@@ -38,6 +44,14 @@ export default function InternalLoginPage() {
       justifyContent: 'center',
       padding: 24
     }}>
+
+    {toast && (
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(null)}
+      />
+    )}
       <div style={{
         background: C.white,
         borderRadius: 20,
@@ -136,7 +150,7 @@ export default function InternalLoginPage() {
                 <Lock size={18} color={C.gray} />
               </div>
               <input
-                type={showPassword ? 'password' : 'text'}
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mật khẩu"
@@ -164,9 +178,9 @@ export default function InternalLoginPage() {
                 }}
               >
                 {showPassword ? (
-                  <EyeOff size={18} color={C.gray} />
-                ) : (
                   <Eye size={18} color={C.gray} />
+                ) : (
+                  <EyeOff size={18} color={C.gray} />
                 )}
               </button>
             </div>

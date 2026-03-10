@@ -27,7 +27,6 @@ export const registerUser = (user) => {
   const newUser = {
     ...user,
     verified: false,
-    blocked: false,
     createdAt: new Date().toISOString()
   };
 
@@ -63,28 +62,23 @@ export const verifyEmail = (code) => {
 
 export const loginUser = (email, password) => {
   const users = getUsers();
+  const user = users.find(u => u.email === email);
 
-  const index = users.findIndex(
-    u => u.email === email && u.password === password
-  );
-
-  if (index === -1) throw new Error("Sai email hoặc mật khẩu");
-
-  const user = users[index];
-
-  if (!user.verified) throw new Error("Tài khoản chưa xác thực email");
+  if (!user) throw new Error("Tài khoản không tồn tại");
+  if (user.password !== password) throw new Error("Sai mật khẩu");
   if (user.blocked === true) throw new Error("Tài khoản đã bị khóa");
 
   const updatedUser = {
-    ...users[index], 
+    ...user,
     lastLogin: new Date().toISOString()
   };
 
-  users[index] = updatedUser;
+  const newUsers = users.map(u =>
+    u.email === updatedUser.email ? updatedUser : u
+  );
 
-  saveUsers(users);
+  saveUsers(newUsers);
   setCurrentUser(updatedUser);
-
   return updatedUser;
 };
 
@@ -126,12 +120,10 @@ const internalUsers = [
 ];
 
 export const loginInternal = (email, password) => {
-
-  const user = internalUsers.find(
-    u => u.email === email && u.password === password
-  );
-
-  if (!user) throw new Error("Sai tài khoản nội bộ");
+  const user = internalUsers.find(u => u.email === email);
+  if (!user) throw new Error("Tài khoản nội bộ không tồn tại");
+  if (user.password !== password) throw new Error("Sai mật khẩu");
+  
   localStorage.setItem("internalUser", JSON.stringify(user));
   return user;
 };

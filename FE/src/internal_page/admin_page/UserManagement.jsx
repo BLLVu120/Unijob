@@ -7,20 +7,10 @@ import {
 import { flex, txt } from '../../utils/styles';
 import { COLORS } from '../../constants/colors';
 import { pageBtnStyle } from '../../constants/pageBtnStyle';
+import { getInitials, formatDate } from '../../utils/textUtils';
+import Toast from '../../components/Toast';
+
 const C = COLORS;
-const getInitials = (name) => {
-  if (!name) return "US";
-  const parts = name.trim().split(" ");
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
-const formatDate = (date) => {
-  if (!date) return "-";
-  const d = new Date(date);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-};
 const UserDetailModal = ({ open, onClose, user }) => {
   if (!open || !user) return null;
 
@@ -296,12 +286,7 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, user }) => {
 };
 
 const formatUser = (u, index) => {
-  const status = (u.blocked ?? false)
-    ? "blocked"
-    : (u.verified ?? false)
-    ? "verified"
-    : "pending";
-
+  const status = (u.blocked ?? false) ? "blocked" : (u.verified ?? false) ? "verified" : "pending";
   const statusMap = {
     verified: { label: "Đã xác thực", bg: C.greenBg, text: C.green },
     pending: { label: "Chờ xác thực", bg: C.yellowBg, text: "#f59e0b" },
@@ -328,15 +313,16 @@ const formatUser = (u, index) => {
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [searchInput, setSearchInput] = useState("");
-  const [statusInput, setStatusInput] = useState("all");
-
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     const data = getUsers();
-    setUsers(data.map(formatUser));
+    const candidateUsers = data.filter(
+      user => user.role === "candidate"
+    );
+
+    setUsers(candidateUsers.map(formatUser));
   }, []);
 
   const displayUsers = users.filter(user => {
@@ -351,6 +337,7 @@ export default function UserManagementPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [toast, setToast] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isUnlockAction, setIsUnlockAction] = useState(false);
 
@@ -394,6 +381,14 @@ export default function UserManagementPage() {
       background: C.grayBg,
       minHeight: '100vh'
     }}>
+
+    {toast && (
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(null)}
+      />
+    )}
       <main style={{ marginLeft: 220, padding: '40px 48px' }}>
         <h1 style={{ ...txt(32, 700), marginBottom: 32 }}>Người dùng</h1>
 
@@ -519,52 +514,11 @@ export default function UserManagementPage() {
                 <h2 style={{ ...txt(18, 700) }}>
                   Danh sách người dùng ({displayUsers.length.toLocaleString()})
                 </h2>
-                {selectedUsers.length > 0 && (
-                  <div style={{ ...flex('center'), gap: 12 }}>
-                    <span style={{ ...txt(14, 500, C.gray) }}>
-                      Đã chọn: {selectedUsers.length}
-                    </span>
-                    <button style={{
-                      padding: '8px 16px',
-                      borderRadius: 8,
-                      border: 'none',
-                      background: C.darkNavy,
-                      color: C.white,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      ...flex('center'),
-                      gap: 6
-                    }}>
-                      <ShieldOff size={14} /> Khóa
-                    </button>
-                    <button
-                      onClick={handleDeleteSelected}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: 8,
-                        border: 'none',
-                        background: C.red,
-                        color: C.white,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        ...flex('center'),
-                        gap: 6
-                      }}
-                    >
-                      <Trash2 size={14} /> Xóa
-                    </button>
-                  </div>
-                )}
               </div>
 
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: C.grayBg }}>
-                    <th style={{ width: 40, padding: '16px 20px' }}>
-                      <input type="checkbox" style={{ cursor: 'pointer' }} />
-                    </th>
                     {['NGƯỜI DÙNG', 'TRẠNG THÁI', 'NGÀY TẠO', 'ĐĂNG NHẬP GẦN NHẤT', 'THAO TÁC'].map(h => (
                       <th key={h} style={{
                         ...txt(12, 700, C.gray),
@@ -580,14 +534,6 @@ export default function UserManagementPage() {
                 <tbody>
                   {currentUsers.map(user => (
                     <tr key={user.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '16px 20px' }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
-                          onChange={() => handleCheckUser(user.id)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                      </td>
                       <td style={{ padding: '16px 20px' }}>
                         <div style={{ ...flex('center'), gap: 12 }}>
                           <div style={{
@@ -774,6 +720,7 @@ export default function UserManagementPage() {
         }}
         onConfirm={() => {
           const storageUsers = getUsers();
+
           const updatedUsers = storageUsers.map(u => {
             if (u.email === selectedUser.email) {
               const isBlocked = !(u.blocked ?? false);
@@ -788,6 +735,7 @@ export default function UserManagementPage() {
 
           saveUsers(updatedUsers);
           setUsers(updatedUsers.map(formatUser));
+          setToast({ message: isUnlockAction ? "Đã mở khóa tài khoản" : "Đã khóa tài khoản", type: "success" });
           setLockModalOpen(false);
           setSelectedUser(null);
         }}
@@ -808,6 +756,7 @@ export default function UserManagementPage() {
           );
           saveUsers(updated);
           setUsers(updated.map(formatUser));
+          setToast({ message: "Đã xóa tài khoản thành công", type: "success" });
           setDeleteModalOpen(false);
           setSelectedUser(null);
         }}

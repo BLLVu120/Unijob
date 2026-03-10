@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Camera, Save, Edit2 } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
+import { getCurrentUser, getUsers, saveUsers } from "../services/authService";
+import { useAuth } from "../context/AuthContext";
+import { getInitials } from "../utils/textUtils";
 const C = COLORS;
 
 const InputField = ({ label, value, onChange, placeholder, disabled, required, textarea, rows = 4 }) => {
@@ -72,15 +75,17 @@ const SelectField = ({ label, value, onChange, options, placeholder, disabled, r
 );
 
 export default function CompanyProfilePage() {
+  const { user, updateUser } = useAuth();
   const [editMode, setEditMode] = useState(false);
+  const currentUser = getCurrentUser();
   const [company, setCompany] = useState({
-    name: 'The Coffee House',
-    industry: 'F&B',
-    size: '1000 - 5000 nhân viên',
-    website: 'https://thecoffeehouse.com',
-    email: 'hr@thecoffeehouse.com',
-    address: 'Tầng 3, Tòa nhà VTC Online 18 Tam Trinh, Hai Bà Trưng, Hà Nội',
-    description: 'The Coffee House được thành lập từ năm 2014, với sứ mệnh mang đến những trải nghiệm cà phê tuyệt vời và không gian thân thiện cho khách hàng.'
+    name: currentUser?.companyName || "",
+    industry: currentUser?.industry || "",
+    size: currentUser?.companySize || "",
+    website: currentUser?.website || "",
+    email: currentUser?.email || "",
+    address: currentUser?.address || "",
+    description: currentUser?.description || ""
   });
 
   const [tempCompany, setTempCompany] = useState({ ...company });
@@ -96,7 +101,33 @@ export default function CompanyProfilePage() {
   };
 
   const handleSave = () => {
-    setCompany({ ...tempCompany });
+    const users = getUsers();
+    const updatedUsers = users.map(u => {
+      if (u.email === user.email) {
+        return {
+          ...u,
+          companyName: tempCompany.name,
+          industry: tempCompany.industry,
+          companySize: tempCompany.size,
+          website: tempCompany.website,
+          address: tempCompany.address,
+          description: tempCompany.description
+        };
+      }
+      return u;
+    });
+
+    saveUsers(updatedUsers);
+    updateUser({
+      companyName: tempCompany.name,
+      industry: tempCompany.industry,
+      companySize: tempCompany.size,
+      website: tempCompany.website,
+      address: tempCompany.address,
+      description: tempCompany.description
+    });
+
+    setCompany(tempCompany);
     setEditMode(false);
   };
 
@@ -192,7 +223,9 @@ export default function CompanyProfilePage() {
                 background: `linear-gradient(135deg, ${C.blue}, ${C.purple})`,
                 ...flex('center'), justifyContent: 'center'
               }}>
-                <span style={{ ...txt(48, 700, C.white) }}>CH</span>
+                <span style={{ ...txt(48, 700, C.white) }}>
+                  {getInitials(company.name)}
+                </span>
               </div>
               {editMode && (
                 <button style={{

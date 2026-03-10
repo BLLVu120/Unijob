@@ -7,6 +7,7 @@ import { COLORS } from '../constants/colors';
 import { flex, txt } from '../utils/styles';
 import { useAuth } from "../context/AuthContext";
 import { setCurrentUser } from "../services/authService";
+import { getInitials } from '../utils/textUtils';
 const C = COLORS;
 
 const Card = ({ children, style = {} }) => (
@@ -245,12 +246,6 @@ export default function ProfilePage() {
     setCurrentUser(updatedUser);
     updateUser(updatedUser); 
     setEditingSection(null);
-  };
-
-  const getInitials = (name) => {
-    if (!name) return "";
-    const parts = name.trim().split(" ");
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   return (

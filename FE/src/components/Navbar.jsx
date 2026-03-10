@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
 import { User, Bookmark, Send, MessageSquare, Lock, Building2, FileText, Users, CreditCard, Receipt, ShieldCheck }
@@ -6,14 +6,11 @@ from 'lucide-react';
 import { COLORS } from '../constants/colors';
 import { useAuth } from "../context/AuthContext";
 import { useAuthGuard } from "../hooks/useAuthGuard";
-const getInitials = (name) => {
-  if (!name) return "";
-  const parts = name.trim().split(" ");
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
+import { getInitials } from '../utils/textUtils';
 
 const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
   const navigate = useNavigate();
+  const displayName = isEmployer ? user?.companyName || user?.name : user?.name;
   const employerMenuItems = [
     { icon: Building2, label: 'Hồ sơ công ty', path: '/employer/company-profile' },
     { icon: FileText, label: 'Tin tuyển dụng', path: '/employer/jobs' },
@@ -31,7 +28,6 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
     { icon: MessageSquare, label: 'Tin nhắn', badge: 3, path: '/candidate/messages' },
     { icon: Lock, label: 'Đổi mật khẩu', path: '/candidate/change-password' }
   ];
-
   const menuItems = isEmployer ? employerMenuItems : userMenuItems;
 
   const handleItemClick = (item) => {
@@ -76,11 +72,11 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
               border: '2px solid rgba(255, 255, 255, 0.5)'
             }}
           >
-            {getInitials(user?.name)}
+            {getInitials(displayName)}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: '600', fontSize: '15px', marginBottom: '2px' }}>
-              {user.name}
+              {isEmployer ? user?.companyName : user?.name}
             </div>
             <div style={{ fontSize: '12px', opacity: 0.9 }}>
               {user.email}
@@ -189,6 +185,7 @@ const Navbar = () => {
 
   const isLoggedIn = !!user;
   const isEmployer = user?.role === "employer";
+  const displayName = user?.role === "employer" ? user?.companyName || user?.name : user?.name;
   const userData = user;
   useAuthGuard();
 
@@ -280,7 +277,7 @@ const Navbar = () => {
                 color: COLORS.white
               }}
             >
-              {getInitials(user?.name)}
+              {getInitials(isEmployer ? user?.companyName : user?.name)}
             </div>
             <div
               style={{
@@ -299,7 +296,7 @@ const Navbar = () => {
                   lineHeight: '1.2'
                 }}
               >
-                {userData?.name}
+                {displayName}
               </div>
               <div
                 style={{
