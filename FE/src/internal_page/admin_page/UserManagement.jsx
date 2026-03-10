@@ -13,17 +13,16 @@ const getInitials = (name) => {
   const parts = name.trim().split(" ");
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
-const toStorageUser = ({
-  id,
-  status,
-  statusLabel,
-  statusColor,
-  statusText,
-  avatar,
-  bgColor,
-  createdDate,
-  ...user
-}) => user;
+const formatDate = (date) => {
+  if (!date) return "-";
+
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+
+  return `${day}/${month}/${year}`;
+};
 const UserDetailModal = ({ open, onClose, user }) => {
   if (!open || !user) return null;
 
@@ -321,15 +320,8 @@ const formatUser = (u, index) => {
     statusLabel: statusMap[status].label,
     statusColor: statusMap[status].bg,
     statusText: statusMap[status].text,
-
-    createdDate: u.createdAt
-      ? new Date(u.createdAt).toLocaleDateString("vi-VN")
-      : "-",
-
-    lastLogin: u.lastLogin
-      ? new Date(u.lastLogin).toLocaleString("vi-VN")
-      : "-",
-
+    createdDate: formatDate(u.createdAt),
+    lastLogin: formatDate(u.lastLogin),
     avatar: getInitials(u.name),
     bgColor: "#7c3aed"
   };
@@ -338,31 +330,46 @@ const formatUser = (u, index) => {
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [searchInput, setSearchInput] = useState("");
+  const [statusInput, setStatusInput] = useState("all");
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   useEffect(() => {
     const data = getUsers();
     setUsers(data.map(formatUser));
   }, []);
+
+  const displayUsers = users.filter(user => {
+    const matchSearch =
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchStatus = statusFilter === "all" || user.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isUnlockAction, setIsUnlockAction] = useState(false);
+
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
-  const total = users.length;
+  const total = displayUsers.length;
   const totalPages = Math.ceil(total / rowsPerPage);
   const start = (page - 1) * rowsPerPage;
   const end = start + rowsPerPage;
-  const currentUsers = users.slice(start, end);
+  const currentUsers = displayUsers.slice(start, end);
 
-const stats = [
-  { icon: Users, label: "Tổng người dùng", value: users.length },
-  { icon: CheckCircle, label: "Đã xác thực", value: users.filter(u => u.status === "verified").length },
-  { icon: Clock, label: "Chờ xác thực", value: users.filter(u => u.status === "pending").length },
-  { icon: Ban, label: "Đã khóa", value: users.filter(u => u.status === "blocked").length }
-];
-
-  const displayUsers = users;
+  const stats = [
+    { icon: Users, label: "Tổng người dùng", value: users.length },
+    { icon: CheckCircle, label: "Đã xác thực", value: users.filter(u => u.status === "verified").length },
+    { icon: Clock, label: "Chờ xác thực", value: users.filter(u => u.status === "pending").length },
+    { icon: Ban, label: "Đã khóa", value: users.filter(u => u.status === "blocked").length }
+  ];
 
   const handleCheckUser = (userId) => {
     if (selectedUsers.includes(userId)) {
@@ -447,6 +454,8 @@ const stats = [
             <Search size={18} color={C.gray} />
             <input
               placeholder="Tìm kiếm theo tên, email..."
+              value={searchTerm}
+              onChange={(e) => {setSearchTerm(e.target.value);}}
               style={{
                 border: 'none',
                 outline: 'none',
@@ -456,40 +465,40 @@ const stats = [
               }}
             />
           </div>
-          <select style={{
-            padding: '10px 14px',
-            borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            fontSize: 14,
-            outline: 'none',
-            cursor: 'pointer',
-            minWidth: 180,
-            appearance: 'none',
-            background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
-          }}>
-            <option>Tất cả trạng thái</option>
-          </select>
-          <input
-            type="date"
-            placeholder="Ngày tạo"
+          <select
+            value={statusFilter}
+            onChange={(e) => {setStatusFilter(e.target.value);}}
             style={{
               padding: '10px 14px',
               borderRadius: 8,
               border: `1px solid ${C.border}`,
               fontSize: 14,
               outline: 'none',
-              minWidth: 150
+            cursor: 'pointer',
+            minWidth: 180,
+            appearance: 'none',
+            background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
+          }}>
+              <option value="all">Tất cả trạng thái</option>
+              <option value="verified">Đã xác thực</option>
+              <option value="pending">Chờ xác thực</option>
+              <option value="blocked">Đã khóa</option>
+          </select>
+          <button 
+            onClick={() => {
+              setSearchTerm(searchInput);
+              setStatusFilter(statusInput);
+              setPage(1);
             }}
-          />
-          <button style={{
-            padding: '10px 32px',
-            borderRadius: 8,
-            border: 'none',
-            background: C.blue,
-            color: C.white,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer'
+            style={{
+              padding: '10px 32px',
+              borderRadius: 8,
+              border: 'none',
+              background: C.blue,
+              color: C.white,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer'
           }}>
             Lọc
           </button>
@@ -558,7 +567,7 @@ const stats = [
                     <th style={{ width: 40, padding: '16px 20px' }}>
                       <input type="checkbox" style={{ cursor: 'pointer' }} />
                     </th>
-                    {['NGƯỜI DÙNG', 'TRẠNG THÁI', 'NGÀY TẠO', 'ĐĂNG NHẬP', 'THAO TÁC'].map(h => (
+                    {['NGƯỜI DÙNG', 'TRẠNG THÁI', 'NGÀY TẠO', 'ĐĂNG NHẬP GẦN NHẤT', 'THAO TÁC'].map(h => (
                       <th key={h} style={{
                         ...txt(12, 700, C.gray),
                         textAlign: 'left',
@@ -743,7 +752,7 @@ const stats = [
                 maxWidth: 400,
                 margin: '0 auto 24px'
               }}>
-                Danh sách người dùng sẽ xuất hiện tại đây khi có người đăng ký tài khoản mới.
+                Danh sách người dùng sẽ xuất hiện tại đây.
               </p>
             </div>
           )}
