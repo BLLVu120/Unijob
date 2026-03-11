@@ -10,7 +10,12 @@ import { getInitials } from '../utils/textUtils';
 
 const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
   const navigate = useNavigate();
-  const displayName = isEmployer ? user?.companyName || user?.name : user?.name;
+  const getDisplayName = (user) => {
+    if (!user) return "";
+    if (user.role === "employer") return user.companyName || user.emp_name || user.name;
+    return user.full_name || user.name;
+  };
+  const displayName = getDisplayName(user);
   const employerMenuItems = [
     { icon: Building2, label: 'Hồ sơ công ty', path: '/employer/company-profile' },
     { icon: FileText, label: 'Tin tuyển dụng', path: '/employer/jobs' },
@@ -76,7 +81,7 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: '600', fontSize: '15px', marginBottom: '2px' }}>
-              {isEmployer ? user?.companyName : user?.name}
+              {displayName}
             </div>
             <div style={{ fontSize: '12px', opacity: 0.9 }}>
               {user.email}
@@ -180,14 +185,15 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
 
 const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { user, logoutUser } = useAuth();
+  const { user, loading, logoutUser } = useAuth();
   const navigate = useNavigate();
+  useAuthGuard();
+
+  if (loading) return null;
 
   const isLoggedIn = !!user;
   const isEmployer = user?.role === "employer";
-  const displayName = user?.role === "employer" ? user?.companyName || user?.name : user?.name;
-  const userData = user;
-  useAuthGuard();
+  const displayName = isEmployer ? user?.emp_name || user?.companyName || user?.name : user?.full_name || user?.name || "";
 
   return (
     <nav
@@ -277,7 +283,7 @@ const Navbar = () => {
                 color: COLORS.white
               }}
             >
-              {getInitials(isEmployer ? user?.companyName : user?.name)}
+              {getInitials(displayName)}
             </div>
             <div
               style={{
@@ -308,7 +314,7 @@ const Navbar = () => {
                   opacity: 0.8
                 }}
               >
-                {userData?.roleName}
+                {isEmployer ? "Nhà tuyển dụng" : "Ứng viên"}
               </div>
             </div>
             <svg

@@ -4,7 +4,7 @@ import { User, Building2, Mail, Lock, Eye, EyeOff, Shield, Zap, CreditCard, Chec
 import Toast from '../components/Toast';
 import { COLORS } from '../constants/colors';
 import { useAuth } from "../context/AuthContext";
-import { loginUser as loginService } from "../services/authService";
+import { loginUser as loginService, loginEmployer } from "../services/authService";
 
 const RoleSelector = ({ selectedRole, onRoleChange }) => (
   <div style={{
@@ -100,12 +100,13 @@ const CandidateLoginForm = ({ setToast }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     try {
-      const user = loginService(email, password);
+      const user = await loginService(email, password);
+      console.log("user from API:", user);
 
       if (user.role !== "candidate") {
         setToast({
@@ -132,208 +133,11 @@ const CandidateLoginForm = ({ setToast }) => {
   };
 
   return (
-      <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '600',
-            color: COLORS.navy,
-            marginBottom: '8px'
-          }}>
-            E-mail
-          </label>
-          <div style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <Mail size={18} color={COLORS.gray} style={{
-              position: 'absolute',
-              left: '14px',
-              pointerEvents: 'none'
-            }} />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="E-mail"
-              style={{
-                width: '100%',
-                padding: '12px 12px 12px 44px',
-                borderRadius: '8px',
-                border: `1px solid ${COLORS.border}`,
-                fontSize: '14px',
-                color: COLORS.navy,
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                boxSizing: 'border-box'
-              }}
-              onFocus={e => e.target.style.borderColor = COLORS.blue}
-              onBlur={e => e.target.style.borderColor = COLORS.border}
-            />
-          </div>
-            {errors.email && (
-              <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
-                {errors.email}
-              </div>
-            )}
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: '600',
-            color: COLORS.navy,
-            marginBottom: '8px'
-          }}>
-            Mật khẩu
-          </label>
-          <div style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <Lock size={18} color={COLORS.gray} style={{
-              position: 'absolute',
-              left: '14px',
-              pointerEvents: 'none'
-            }} />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mật khẩu"
-              style={{
-                width: '100%',
-                padding: '12px 44px 12px 44px',
-                borderRadius: '8px',
-                border: `1px solid ${COLORS.border}`,
-                fontSize: '14px',
-                color: COLORS.navy,
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                boxSizing: 'border-box'
-              }}
-              onFocus={e => e.target.style.borderColor = COLORS.blue}
-              onBlur={e => e.target.style.borderColor = COLORS.border}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: 'absolute',
-                right: '14px',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              {showPassword ? (
-                <Eye size={18} color={COLORS.gray} />
-              ) : (
-                <EyeOff size={18} color={COLORS.gray} />
-              )}
-            </button>
-          </div>
-          {errors.password && (
-            <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
-              {errors.password}
-            </div>
-          )}
-        </div>
-
-        <button
-          type="submit"
-          style={{
-            width: '100%',
-            padding: '14px',
-            borderRadius: '8px',
-            border: 'none',
-            background: `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`,
-            color: COLORS.white,
-            fontSize: '15px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            boxShadow: '0 4px 12px rgba(139, 127, 214, 0.3)'
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 127, 214, 0.4)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 127, 214, 0.3)';
-          }}
-        >
-          Đăng nhập
-        </button>
-      </form>
-  );
-};
-
-const EmployerLoginForm = ({ setToast }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({});
-  const navigate = useNavigate();
-  
-  const { loginUser } = useAuth();
-  const validate = () => {
-    const newErrors = {};
-
-    if (!email) newErrors.email = 'Email doanh nghiệp không được để trống';
-    else if (!/^\S+@\S+\.\S+$/.test(email))
-      newErrors.email = 'Email doanh nghiệp không hợp lệ';
-
-    if (!password) newErrors.password = 'Mật khẩu không được để trống';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-
-    try {
-      const user = loginService(email, password);
-
-      if (user.role !== "employer") {
-        setToast({
-          message: "Tài khoản không phải nhà tuyển dụng",
-          type: "error"
-        });
-        return;
-      }
-
-      const loggedUser = {
-        ...user,
-        roleName: "Nhà tuyển dụng"
-      };
-
-      loginUser(loggedUser);
-      navigate("/");
-
-    } catch (error) {
-      setToast({
-        message: error.message,
-        type: "error"
-      });
-    }
-  };
-
-  return (
-      <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
+    <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '14px',
           fontWeight: '600',
           color: COLORS.navy,
           marginBottom: '8px'
@@ -370,11 +174,208 @@ const EmployerLoginForm = ({ setToast }) => {
             onBlur={e => e.target.style.borderColor = COLORS.border}
           />
         </div>
-          {errors.email && (
-            <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
-              {errors.email}
-            </div>
-          )}
+        {errors.email && (
+          <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
+            {errors.email}
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: '24px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: COLORS.navy,
+          marginBottom: '8px'
+        }}>
+          Mật khẩu
+        </label>
+        <div style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <Lock size={18} color={COLORS.gray} style={{
+            position: 'absolute',
+            left: '14px',
+            pointerEvents: 'none'
+          }} />
+          <input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mật khẩu"
+            style={{
+              width: '100%',
+              padding: '12px 44px 12px 44px',
+              borderRadius: '8px',
+              border: `1px solid ${COLORS.border}`,
+              fontSize: '14px',
+              color: COLORS.navy,
+              outline: 'none',
+              transition: 'border-color 0.2s',
+              boxSizing: 'border-box'
+            }}
+            onFocus={e => e.target.style.borderColor = COLORS.blue}
+            onBlur={e => e.target.style.borderColor = COLORS.border}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={{
+              position: 'absolute',
+              right: '14px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            {showPassword ? (
+              <Eye size={18} color={COLORS.gray} />
+            ) : (
+              <EyeOff size={18} color={COLORS.gray} />
+            )}
+          </button>
+        </div>
+        {errors.password && (
+          <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
+            {errors.password}
+          </div>
+        )}
+      </div>
+
+      <button
+        type="submit"
+        style={{
+          width: '100%',
+          padding: '14px',
+          borderRadius: '8px',
+          border: 'none',
+          background: `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`,
+          color: COLORS.white,
+          fontSize: '15px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          boxShadow: '0 4px 12px rgba(139, 127, 214, 0.3)'
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 6px 16px rgba(139, 127, 214, 0.4)';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 127, 214, 0.3)';
+        }}
+      >
+        Đăng nhập
+      </button>
+    </form>
+  );
+};
+
+const EmployerLoginForm = ({ setToast }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
+  
+  const { loginUser } = useAuth();
+  const validate = () => {
+    const newErrors = {};
+
+    if (!email) newErrors.email = 'Email doanh nghiệp không được để trống';
+    else if (!/^\S+@\S+\.\S+$/.test(email))
+      newErrors.email = 'Email doanh nghiệp không hợp lệ';
+
+    if (!password) newErrors.password = 'Mật khẩu không được để trống';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    try {
+      const user = await loginEmployer(email, password);
+
+      if (user.role !== "employer") {
+        setToast({
+          message: "Tài khoản không phải nhà tuyển dụng",
+          type: "error"
+        });
+        return;
+      }
+
+      const loggedUser = {
+        ...user,
+        roleName: "Nhà tuyển dụng"
+      };
+
+      loginUser(loggedUser);
+      navigate("/");
+
+    } catch (error) {
+      setToast({
+        message: error.message,
+        type: "error"
+      });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ marginTop: '24px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: COLORS.navy,
+          marginBottom: '8px'
+        }}>
+          E-mail
+        </label>
+        <div style={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <Mail size={18} color={COLORS.gray} style={{
+            position: 'absolute',
+            left: '14px',
+            pointerEvents: 'none'
+          }} />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="E-mail"
+            style={{
+              width: '100%',
+              padding: '12px 12px 12px 44px',
+              borderRadius: '8px',
+              border: `1px solid ${COLORS.border}`,
+              fontSize: '14px',
+              color: COLORS.navy,
+              outline: 'none',
+              transition: 'border-color 0.2s',
+              boxSizing: 'border-box'
+            }}
+            onFocus={e => e.target.style.borderColor = COLORS.blue}
+            onBlur={e => e.target.style.borderColor = COLORS.border}
+          />
+        </div>
+        {errors.email && (
+          <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
+            {errors.email}
+          </div>
+        )}
       </div>
 
       <div style={{ marginBottom: '24px' }}>

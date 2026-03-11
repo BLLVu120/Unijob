@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User, Edit2, X,
   Calendar, Mail, Phone, MapPin, Heart, Briefcase, GraduationCap, Award, Camera
@@ -6,7 +6,6 @@ import {
 import { COLORS } from '../constants/colors';
 import { flex, txt } from '../utils/styles';
 import { useAuth } from "../context/AuthContext";
-import { setCurrentUser } from "../services/authService";
 import { getInitials } from '../utils/textUtils';
 const C = COLORS;
 
@@ -128,27 +127,43 @@ const formatDateDisplay = (date) => {
 };
 
 export default function ProfilePage() {
-  const { updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
+
   const [editingSection, setEditingSection] = useState(null);
   const [errors, setErrors] = useState({});
-  const [profile, setProfile] = useState(() => {
-    const sessionUser = JSON.parse(localStorage.getItem("user") || "null");
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const fullUser =
-      users.find(u => u.email === sessionUser?.email) ||
-      sessionUser ||
-      {};
-
-    return {
-      name: fullUser.name || "",
-      gender: fullUser.gender || "",
-      dob: fullUser.birthDate || "",
-      email: fullUser.email || "",
-      phone: fullUser.phone || "",
-      address: fullUser.address || ""
-    };
+  const [profile, setProfile] = useState({
+    name: user?.full_name || "",
+    gender: user?.gender || "",
+    dob: user?.dob || "",
+    email: user?.email || "",
+    phone: user?.phone_number || "",
+    address: user?.address || ""
   });
+
   const [editProfile, setEditProfile] = useState(profile);
+  
+  useEffect(() => {
+    if (!user) return;
+
+    setProfile({
+      name: user.full_name ?? "",
+      gender: user.gender ?? "",
+      dob: user.dob ?? "",
+      email: user.email ?? "",
+      phone: user.phone_number ?? "",
+      address: user.address ?? ""
+    });
+
+    setEditProfile({
+      name: user.full_name ?? "",
+      gender: user.gender ?? "",
+      dob: user.dob ?? "",
+      email: user.email ?? "",
+      phone: user.phone_number ?? "",
+      address: user.address ?? ""
+    });
+
+  }, [user]);
 
   const validate = () => {
     const newErrors = {};
@@ -202,52 +217,52 @@ export default function ProfilePage() {
   ]);
   const openEdit = (section) => {
     if (section === "profile") {
-      setEditProfile(profile);
+      setEditProfile({ ...profile });
       setErrors({});
     }
     setEditingSection(section);
   };
+
   const closeEdit = () => {
     setErrors({});
     setEditingSection(null);
   };
-  const saveEdit = () => {
-    if (editingSection === "profile") {
-      if (!validate()) return;
-      setProfile(editProfile);
+  
+  const saveEdit = async () => {
+    if (editingSection !== "profile") return;
+    if (!validate()) return;
+
+    try {
+      const updatedUser = {
+        ...user,                
+        candidate_id: user.candidate_id,
+        full_name: editProfile.name,
+        dob: editProfile.dob,
+        gender: editProfile.gender,
+        phone_number: editProfile.phone,
+        address: editProfile.address
+      };
+
+      const newUser = await updateUser(updatedUser);
+      
+      const newProfile = {
+        name: newUser.full_name ?? "",
+        gender: newUser.gender ?? "",
+        dob: newUser.dob ?? "",
+        email: newUser.email ?? "",
+        phone: newUser.phone_number ?? "",
+        address: newUser.address ?? ""
+      };
+
+      setProfile(newProfile);
+      setEditProfile(newProfile);
+      setEditingSection(null);
+
+    } catch (err) {
+      console.error(err);
+      alert("Cập nhật hồ sơ thất bại");
     }
-
-    const sessionUser = JSON.parse(localStorage.getItem("user"));
-    const users = JSON.parse(localStorage.getItem("users")) || [];
-
-    const updatedUsers = users.map((u) => {
-      if (u.email === sessionUser.email) {
-        return {
-          ...u,
-          name: editProfile.name,
-          gender: editProfile.gender,
-          birthDate: editProfile.dob,
-          phone: editProfile.phone,
-          address: editProfile.address
-        };
-      }
-      return u;
-    });
-
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-    const updatedUser = {
-      ...sessionUser,
-      name: editProfile.name,
-      gender: editProfile.gender,
-      birthDate: editProfile.dob,
-      phone: editProfile.phone,
-      address: editProfile.address
-    };
-    setCurrentUser(updatedUser);
-    updateUser(updatedUser); 
-    setEditingSection(null);
   };
-
   return (
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -495,7 +510,6 @@ export default function ProfilePage() {
         <InputField
           label="Ngày sinh"
           type="date"
-          style={{ fontSize: 0 }}
           value={editProfile.dob}
           onChange={v => {
             setEditProfile({ ...editProfile, dob: v });

@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Camera, Save, Edit2 } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
-import { getCurrentUser, getUsers, saveUsers } from "../services/authService";
-import { useAuth } from "../context/AuthContext";
+import { getCurrentEmployer, updateEmployer } from "../services/authService";
 import { getInitials } from "../utils/textUtils";
 const C = COLORS;
 
@@ -75,20 +74,44 @@ const SelectField = ({ label, value, onChange, options, placeholder, disabled, r
 );
 
 export default function CompanyProfilePage() {
-  const { user, updateUser } = useAuth();
   const [editMode, setEditMode] = useState(false);
-  const currentUser = getCurrentUser();
   const [company, setCompany] = useState({
-    name: currentUser?.companyName || "",
-    industry: currentUser?.industry || "",
-    size: currentUser?.companySize || "",
-    website: currentUser?.website || "",
-    email: currentUser?.email || "",
-    address: currentUser?.address || "",
-    description: currentUser?.description || ""
+    name: "",
+    industry: "",
+    size: "",
+    website: "",
+    email: "",
+    address: "",
+    description: ""
   });
 
-  const [tempCompany, setTempCompany] = useState({ ...company });
+  const [tempCompany, setTempCompany] = useState({
+    name: "",
+    industry: "",
+    size: "",
+    website: "",
+    email: "",
+    address: "",
+    description: ""
+  });
+
+  useEffect(() => {
+    const user = getCurrentEmployer();
+    if (!user) return;
+
+    const data = {
+      name: user.emp_name || "",
+      industry: user.field || "",
+      size: user.scope || "",
+      website: user.website || "",
+      email: user.email || "",
+      address: user.address || "",
+      description: user.description || ""
+    };
+
+    setCompany(data);
+    setTempCompany(data);
+  }, []);
 
   const handleEdit = () => {
     setTempCompany({ ...company });
@@ -100,56 +123,61 @@ export default function CompanyProfilePage() {
     setEditMode(false);
   };
 
-  const handleSave = () => {
-    const users = getUsers();
-    const updatedUsers = users.map(u => {
-      if (u.email === user.email) {
-        return {
-          ...u,
-          companyName: tempCompany.name,
-          industry: tempCompany.industry,
-          companySize: tempCompany.size,
-          website: tempCompany.website,
-          address: tempCompany.address,
-          description: tempCompany.description
-        };
-      }
-      return u;
-    });
-
-    saveUsers(updatedUsers);
-    updateUser({
-      companyName: tempCompany.name,
-      industry: tempCompany.industry,
-      companySize: tempCompany.size,
-      website: tempCompany.website,
-      address: tempCompany.address,
-      description: tempCompany.description
-    });
-
-    setCompany(tempCompany);
-    setEditMode(false);
+  const updateField = (field, value) => {
+    setTempCompany(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  const updateField = (field, value) => {
-    setTempCompany({ ...tempCompany, [field]: value });
+  const handleSave = async () => {
+    try {
+      const updated = {
+        emp_name: tempCompany.name,
+        field: tempCompany.industry,
+        scope: tempCompany.size,
+        website: tempCompany.website,
+        address: tempCompany.address,
+        description: tempCompany.description,
+        email: company.email
+      };
+
+      const res = await updateEmployer(updated);
+      const data = {
+        name: res.emp_name || "",
+        industry: res.field || "",
+        size: res.scope || "",
+        website: res.website || "",
+        email: res.email || "",
+        address: res.address || "",
+        description: res.description || ""
+      };
+
+      setCompany(data);
+      setTempCompany(data);
+      setEditMode(false);
+    } catch (err) {
+      alert(err.message || "Cập nhật thất bại");
+    }
   };
 
   const industries = [
-    'F&B',
-    'Bán lẻ',
-    'Công nghệ',
-    'Giáo dục',
-    'Y tế',
-    'Du lịch',
+    'Công nghệ thông tin',
+    'Marketing',
+    'Thiết kế',
+    'Hành chính',
+    'Bán hàng',
+    'F&B - Nhà hàng',
+    'Giao hàng',
+    'Gia sư - Dạy học',
     'Khác'
   ];
 
   const companySizes = [
-    '1-50 nhân viên',
-    '51-200 nhân viên',
-    '201-500 nhân viên',
-    '501-1000 nhân viên',
+    '1 - 50 nhân viên',
+    '51 - 200 nhân viên',
+    '201 - 500 nhân viên',
+    '501 - 1000 nhân viên',
     '1000 - 5000 nhân viên',
     '5000+ nhân viên'
   ];
@@ -224,7 +252,7 @@ export default function CompanyProfilePage() {
                 ...flex('center'), justifyContent: 'center'
               }}>
                 <span style={{ ...txt(48, 700, C.white) }}>
-                  {getInitials(company.name)}
+                  {getInitials(company.name || "Company")}
                 </span>
               </div>
               {editMode && (

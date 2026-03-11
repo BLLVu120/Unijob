@@ -8,6 +8,7 @@ import { flex, txt } from '../../utils/styles';
 import { COLORS } from '../../constants/colors';
 import { pageBtnStyle } from '../../constants/pageBtnStyle';
 import { getInitials, formatDate } from '../../utils/textUtils';
+import { apiRequest } from "../../api/api";
 import Toast from '../../components/Toast';
 
 const C = COLORS;
@@ -286,7 +287,7 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, user }) => {
 };
 
 const formatUser = (u, index) => {
-  const status = (u.blocked ?? false) ? "blocked" : (u.verified ?? false) ? "verified" : "pending";
+  const status = (u.blocked ?? false) ? "blocked" : (u.is_verified ?? false) ? "verified" : "pending";
   const statusMap = {
     verified: { label: "Đã xác thực", bg: C.greenBg, text: C.green },
     pending: { label: "Chờ xác thực", bg: C.yellowBg, text: "#f59e0b" },
@@ -303,8 +304,8 @@ const formatUser = (u, index) => {
     statusLabel: statusMap[status].label,
     statusColor: statusMap[status].bg,
     statusText: statusMap[status].text,
-    createdDate: formatDate(u.createdAt),
-    lastLogin: formatDate(u.lastLogin),
+    createdDate: formatDate(u.created_at),
+    lastLogin: formatDate(u.updated_at),
     avatar: getInitials(u.name),
     bgColor: "#7c3aed"
   };
@@ -317,12 +318,25 @@ export default function UserManagementPage() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    const data = getUsers();
-    const candidateUsers = data.filter(
-      user => user.role === "candidate"
-    );
-
-    setUsers(candidateUsers.map(formatUser));
+    const fetchUsers = async () => {
+      try {
+        const data = await apiRequest("/v1/admin/get_all_candidates");
+        const list = data.candidates || [];
+        const formatted = list.map((u, index) =>
+          formatUser({
+            ...u,
+            name: u.full_name,
+            phone: u.phone_number,
+            verified: u.is_verified,
+            createdAt: u.created_at
+          }, index)
+        );
+        setUsers(formatted);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchUsers();
   }, []);
 
   const displayUsers = users.filter(user => {
@@ -478,11 +492,7 @@ export default function UserManagementPage() {
               <option value="blocked">Đã khóa</option>
           </select>
           <button 
-            onClick={() => {
-              setSearchTerm(searchInput);
-              setStatusFilter(statusInput);
-              setPage(1);
-            }}
+            onClick={() => {setPage(1)}}
             style={{
               padding: '10px 32px',
               borderRadius: 8,
@@ -749,14 +759,24 @@ export default function UserManagementPage() {
           setDeleteModalOpen(false);
           setSelectedUser(null);
         }}
-        onConfirm={() => {
-          const storageUsers = getUsers();
-          const updated = storageUsers.filter(
-            u => u.email !== selectedUser.email
-          );
-          saveUsers(updated);
-          setUsers(updated.map(formatUser));
-          setToast({ message: "Đã xóa tài khoản thành công", type: "success" });
+        onConfirm={async () => {
+          try {
+            await apiRequest(
+              `/v1/candidate/delete?email=${encodeURIComponent(selectedUser.email)}`,
+              { method: "DELETE" }
+            );
+            setUsers(users.filter(u => u.email !== selectedUser.email));
+            setToast({
+              message: "Đã xóa tài khoản thành công",
+              type: "success"
+            });
+
+          } catch (err) {
+            setToast({
+              message: "Không thể xóa tài khoản",
+              type: "error"
+            });
+          }
           setDeleteModalOpen(false);
           setSelectedUser(null);
         }}

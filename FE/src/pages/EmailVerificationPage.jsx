@@ -1,17 +1,23 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Mail, RefreshCw, AlertCircle } from 'lucide-react';
 import { COLORS } from '../constants/colors';
 import { verifyEmail, getPendingUser, clearPendingUser } from "../services/authService";
 import { useNavigate } from "react-router-dom";
 
 const EmailVerificationPage = () => {
-  const pendingUser = getPendingUser();
+  const [pendingUser] = useState(getPendingUser());
   const userEmail = pendingUser?.email || "";
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
   const inputRefs = useRef([]);
   const navigate = useNavigate();
+  useEffect(() => {
+    if (!pendingUser) {
+      navigate("/login");
+    }
+  }, [pendingUser, navigate]);
+
   const handleChange = (index, value) => {
     if (value && !/^\d$/.test(value)) return;
     const newCode = [...code];
@@ -43,20 +49,20 @@ const EmailVerificationPage = () => {
     if (pastedData.length === 6) handleVerify(newCode.join(''));
   };
 
-  const handleVerify = (codeString) => {
+  const handleVerify = async (codeString) => {
     setIsVerifying(true);
-    setTimeout(() => {
-      try {
-        verifyEmail(codeString);
-        clearPendingUser();
-        navigate("/verification-success", {state: { email: pendingUser.email }});
-      } catch (err) {
-        setError(err.message);
-        setCode(["", "", "", "", "", ""]);
-        inputRefs.current[0]?.focus();
-      }
-      setIsVerifying(false);
-    }, 1000);
+
+    try {
+      await verifyEmail(codeString);
+      navigate("/verification-success", { state: { email: userEmail } });
+      clearPendingUser();
+
+    } catch (err) {
+      setError(err.message);
+      setCode(["", "", "", "", "", ""]);
+      inputRefs.current[0]?.focus();
+    }
+    setIsVerifying(false);
   };
 
   const handleResend = () => {

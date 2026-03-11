@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
-import { User, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin, Calendar, Briefcase, Shield, Zap, CreditCard, CheckCircle, IdCard } from 'lucide-react';
+import { 
+  User, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin,
+  Calendar, Briefcase, Shield, Zap, CreditCard, CheckCircle, IdCard 
+} from 'lucide-react';
 import { COLORS } from '../constants/colors';
-import { setPendingUser, getUsers } from "../services/authService";
+import { setPendingUser, registerUser, registerEmployer } from "../services/authService";
 
 const RoleSelector = ({ selectedRole, onRoleChange }) => (
   <div style={{
@@ -186,7 +189,7 @@ const CandidateRegistrationForm = () => {
     birthDate: '',
     gender: '',
     address: '',
-    IdCard: '',
+    idCard: '',
     agreed: false
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -200,7 +203,7 @@ const CandidateRegistrationForm = () => {
     else if (formData.fullName.trim().length < 2) newErrors.fullName = 'Họ tên phải có ít nhất 2 ký tự';
 
     if (!formData.phone) newErrors.phone = 'Vui lòng nhập số điện thoại';
-    else if (!/^(0|\+84)[0-9]{9}$/.test(formData.phone)) newErrors.phone = 'Số điện thoại không hợp lệ';
+    else if (!/^(0|\+84)[0-9]{9,10}$/.test(formData.phone)) newErrors.phone = 'Số điện thoại không hợp lệ';
 
     if (!formData.email) newErrors.email = 'Vui lòng nhập email';
     else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Email không hợp lệ';
@@ -225,43 +228,36 @@ const CandidateRegistrationForm = () => {
     if (!formData.address) newErrors.address = 'Vui lòng nhập địa chỉ';
     else if (formData.address.trim().length < 5) newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
 
-    if (!formData.IdCard) newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD';
-    else if (formData.IdCard.length !== 12 || !/^\d+$/.test(formData.IdCard)) 
-      newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD hợp lệ (12 chữ số)';
+    if (!formData.idCard) newErrors.idCard = 'Vui lòng nhập số CMND/CCCD';
+    else if (formData.idCard.length !== 12 || !/^\d+$/.test(formData.idCard)) 
+      newErrors.idCard = 'Vui lòng nhập số CMND/CCCD hợp lệ (12 chữ số)';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-  const pendingUser = {
-    name: formData.fullName,
-    email: formData.email,
-    phone: formData.phone,
-    role: "candidate",
-    password: formData.password,
-    birthDate: formData.birthDate,
-    gender: formData.gender,
-    address: formData.address,
-    idCard: formData.IdCard,
-    createdAt: new Date().toISOString()
-  };
+    const pendingUser = {
+      full_name: formData.fullName,
+      email: formData.email,
+      phone_number: formData.phone,
+      password: formData.password,
+      dob: formData.birthDate,
+      gender: formData.gender,
+      address: formData.address,
+      cid: formData.idCard,
+      is_verified: false
+    };
 
     try {
-      const users = getUsers();
-      const emailExists = users.some(u => u.email === pendingUser.email);
-      if (emailExists) {
-        setErrors({ email: "Email đã tồn tại" });
-        return;
-      }
+      await registerUser(pendingUser);
       setPendingUser(pendingUser);
       navigate("/verify-email");
-
-      } catch (err) {
-        console.error(err);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -444,12 +440,12 @@ const CandidateRegistrationForm = () => {
         placeholder="Nhập số CMND/CCCD"
         icon={IdCard}
         required
-        value={formData.IdCard}
-        onChange={(val) => setFormData({...formData, IdCard: val})}
+        value={formData.idCard}
+        onChange={(val) => setFormData({...formData, idCard: val})}
       />
-      {errors.IdCard && (
+      {errors.idCard && (
         <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '-10px', marginBottom: '15px' }}>
-          {errors.IdCard}
+          {errors.idCard}
         </div>
       )}
 
@@ -533,7 +529,7 @@ const EmployerRegistrationForm = () => {
     password: '',
     confirmPassword: '',
     companyName: '',
-    IdCard: '',
+    idCard: '',
     address: '',
     taxRegistrationNumber: '',
     agreed: false
@@ -549,7 +545,7 @@ const EmployerRegistrationForm = () => {
       else if (formData.fullName.trim().length < 2) newErrors.fullName = 'Họ tên phải có ít nhất 2 ký tự';
 
       if (!formData.phone) newErrors.phone = 'Vui lòng nhập số điện thoại';
-      else if (!/^(0|\+84)[0-9]{9}$/.test(formData.phone)) newErrors.phone = 'Số điện thoại không hợp lệ';
+      else if (!/^(0|\+84)[0-9]{9,10}$/.test(formData.phone)) newErrors.phone = 'Số điện thoại không hợp lệ';
 
       if (!formData.email) newErrors.email = 'Vui lòng nhập email';
       else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Email không hợp lệ';
@@ -562,9 +558,9 @@ const EmployerRegistrationForm = () => {
       if (!formData.companyName) newErrors.companyName = 'Vui lòng nhập tên công ty';
       else if (formData.companyName.trim().length < 3) newErrors.companyName = 'Tên công ty phải có ít nhất 3 ký tự';
 
-      if (!formData.IdCard) newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD';
-      else if (formData.IdCard.length !== 12 || !/^\d+$/.test(formData.IdCard))
-        newErrors.IdCard = 'Vui lòng nhập số CMND/CCCD hợp lệ (12 chữ số)';
+      if (!formData.idCard) newErrors.idCard = 'Vui lòng nhập số CMND/CCCD';
+      else if (formData.idCard.length !== 12 || !/^\d+$/.test(formData.idCard))
+        newErrors.idCard = 'Vui lòng nhập số CMND/CCCD hợp lệ (12 chữ số)';
 
       if (!formData.address) newErrors.address = 'Vui lòng nhập địa chỉ';
       else if (formData.address.trim().length < 5) newErrors.address = 'Địa chỉ phải có ít nhất 5 ký tự';
@@ -577,36 +573,31 @@ const EmployerRegistrationForm = () => {
       return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     const pendingUser = {
-      name: formData.fullName,
-      phone: formData.phone,
+      emp_name: formData.companyName,
+      representative_name: formData.fullName,
+      phone_number: formData.phone,
       email: formData.email,
       password: formData.password,
-      role: "employer",
-      companyName: formData.companyName,
-      idCard: formData.IdCard,
       address: formData.address,
-      taxRegistrationNumber: formData.taxRegistrationNumber,
-      verified: false,
-      createdAt: new Date().toISOString()
+      tax_code: formData.taxRegistrationNumber,
+      cid: formData.idCard,
+      website: "",
+      description: "",
+      field: "",
+      scope: "",
+      is_verified: false,
+      score: 0
     };
 
     try {
-      const users = getUsers();
-
-      const emailExists = users.some(u => u.email === pendingUser.email);
-      if (emailExists) {
-        setErrors({ email: "Email đã tồn tại" });
-        return;
-      }
-
+      await registerEmployer(pendingUser);
       setPendingUser(pendingUser);
       navigate("/verify-email");
-
     } catch (err) {
       console.error(err);
     }
@@ -725,12 +716,12 @@ const EmployerRegistrationForm = () => {
         placeholder="Nhập số CMND/CCCD"
         icon={IdCard}
         required
-        value={formData.IdCard}
-        onChange={(val) => setFormData({...formData, IdCard: val})}
+        value={formData.idCard}
+        onChange={(val) => setFormData({...formData, idCard: val})}
       />
-      {errors.IdCard && (
+      {errors.idCard && (
         <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '-10px', marginBottom: '15px' }}>
-          {errors.IdCard}
+          {errors.idCard}
         </div>
       )}
 
