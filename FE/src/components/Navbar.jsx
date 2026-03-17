@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
-import { User, Bookmark, Send, MessageSquare, Lock, Building2, FileText, Users, CreditCard, Receipt, ShieldCheck }
-from 'lucide-react';
+import { 
+  User, Bookmark, Send, MessageSquare, Lock,
+  Building2, FileText, Users, CreditCard, Receipt, ShieldCheck 
+} from 'lucide-react';
 import { COLORS } from '../constants/colors';
 import { useAuth } from "../context/AuthContext";
 import { useAuthGuard } from "../hooks/useAuthGuard";
@@ -20,7 +22,7 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
     { icon: Building2, label: 'Hồ sơ công ty', path: '/employer/company-profile' },
     { icon: FileText, label: 'Tin tuyển dụng', path: '/employer/jobs' },
     { icon: Users, label: 'Ứng viên', path: '/employer/candidates' },
-    { icon: MessageSquare, label: 'Tin nhắn', badge: 3, path: '/messages' },
+    { icon: MessageSquare, label: 'Tin nhắn', path: '/messages' },
     { icon: CreditCard, label: 'Đăng kí gói', path: '/packages' },
     { icon: Receipt, label: 'Lịch sử giao dịch', path: '/transactions' },
     { icon: ShieldCheck, label: 'Xác thực', path: '/verification' }
@@ -30,7 +32,7 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
     { icon: User, label: 'Hồ sơ cá nhân', path: '/candidate/profile' },
     { icon: Bookmark, label: 'Việc đã lưu', path: '/candidate/saved-jobs' },
     { icon: Send, label: 'Việc đã ứng tuyển', path: '/candidate/applied-jobs' },
-    { icon: MessageSquare, label: 'Tin nhắn', badge: 3, path: '/candidate/messages' },
+    { icon: MessageSquare, label: 'Tin nhắn', path: '/candidate/messages' },
     { icon: Lock, label: 'Đổi mật khẩu', path: '/candidate/change-password' }
   ];
   const menuItems = isEmployer ? employerMenuItems : userMenuItems;
@@ -126,23 +128,6 @@ const DropdownMenu = ({ user, isEmployer, onLogout, onClose }) => {
               >
                 {item.label}
               </span>
-
-              {item.badge && (
-                <span
-                  style={{
-                    background: COLORS.red,
-                    color: COLORS.white,
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    padding: '4px 10px',
-                    borderRadius: '10px',
-                    minWidth: '20px',
-                    textAlign: 'center'
-                  }}
-                >
-                  {item.badge}
-                </span>
-              )}
             </div>
           );
         })}

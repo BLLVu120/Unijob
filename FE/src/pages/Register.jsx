@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
-import { 
-  User, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin,
-  Calendar, Briefcase, Shield, Zap, CreditCard, CheckCircle, IdCard 
-} from 'lucide-react';
+import { User, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin, Calendar, Briefcase, IdCard } from 'lucide-react';
+import { authHeroConfig } from '../constants/authConfig';
 import { COLORS } from '../constants/colors';
 import { setPendingUser, registerUser, registerEmployer } from "../services/authService";
 
@@ -814,30 +812,10 @@ const EmployerRegistrationForm = () => {
 const RegistrationPage = () => {
   const [selectedRole, setSelectedRole] = useState('candidate');
 
-  const candidateFeatures = [
-    { icon: CheckCircle, text: '10.000+ việc làm part-time được xác thực' },
-    { icon: Shield, text: 'An toàn với hệ thống xác thực doanh nghiệp' },
-    { icon: Zap, text: 'Nhanh chóng ứng tuyển chỉ trong 30 giây' },
-    { icon: CreditCard, text: 'Miễn phí hoàn toàn cho ứng viên' }
-  ];
-
-  const employerFeatures = [
-    { icon: User, text: '50.000+ ứng viên sẵn sàng làm việc' },
-    { icon: Shield, text: 'Uy tín với hệ thống xác thực hồ sơ ứng viên' },
-    { icon: Zap, text: 'Nhanh chóng đăng tin tuyển dụng trong 5 phút' },
-    { icon: CreditCard, text: 'Hiệu quả tỷ lệ tìm được ứng viên phù hợp cao' }
-  ];
-
-  const features = selectedRole === 'candidate' ? candidateFeatures : employerFeatures;
-  const heroTitle = selectedRole === 'candidate' 
-    ? 'Với UNIJOB, tìm việc làm part-time trở nên dễ dàng hơn bao giờ hết'
-    : 'Tìm kiếm ứng viên chất lượng cho doanh nghiệp của bạn';
-  const heroSubtitle = selectedRole === 'candidate'
-    ? 'Nền tảng kết nối ứng viên với hàng ngàn cơ hội việc làm part-time uy tín tại Việt Nam.'
-    : 'Nền tảng tuyển dụng hàng đầu giúp doanh nghiệp kết nối với hàng ngàn ứng viên tiềm năng.';
-  const gradientColor = selectedRole === 'candidate' 
-    ? `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`
-    : `linear-gradient(135deg, ${COLORS.blue} 0%, ${COLORS.blueGradient} 100%)`;
+  const features = authHeroConfig[selectedRole].features;
+  const heroTitle = authHeroConfig[selectedRole].title;
+  const heroSubtitle = authHeroConfig[selectedRole].subtitle;
+  const gradientColor = authHeroConfig[selectedRole].gradient;
 
   return (
     <div style={{

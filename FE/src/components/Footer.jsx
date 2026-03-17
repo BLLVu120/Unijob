@@ -98,7 +98,7 @@ const Footer = () => (
       fontSize: '13px',
       opacity: 0.6
     }}>
-      © 2025 UNIJOB. All rights reserved.
+      © 2026 UNIJOB. All rights reserved.
     </div>
   </footer>
 );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Building2, CreditCard, Search, Eye, Edit, Trash2,
   Plus, RefreshCw, X, MapPin, Briefcase, GraduationCap,
@@ -8,6 +8,10 @@ import {
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
 import { pageBtnStyle } from '../constants/pageBtnStyle';
+import { jobService } from "../services/jobService";
+import { formatDate } from '../utils/textUtils';
+import { jobFormFields, getJobFieldKey, jobExperienceLabel } from '../constants/jobFormFields';
+import Toast from '../components/Toast';
 const C = COLORS;
 
 const RenewJobModal = ({ open, onClose }) => {
@@ -128,7 +132,7 @@ const RenewJobModal = ({ open, onClose }) => {
 };
 
 const ViewJobModal = ({ open, onClose, job }) => {
-  if (!open) return null;
+  if (!open || !job) return null;
 
   const statusConfig = {
     active: {
@@ -150,7 +154,7 @@ const ViewJobModal = ({ open, onClose, job }) => {
     }
   };
 
-  const config = statusConfig[job.detailedStatus];
+  const config = statusConfig[job?.detailedStatus] || statusConfig.pending;
   const StatusIcon = config.badge.icon;
 
   return (
@@ -205,8 +209,12 @@ const ViewJobModal = ({ open, onClose, job }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
                 { icon: MapPin, label: 'Địa điểm', value: job.location },
-                { icon: Briefcase, label: 'Mức lương', value: job.salary },
-                { icon: GraduationCap, label: 'Kinh nghiệm', value: job.experience }
+                { 
+                  icon: Briefcase, 
+                  label: 'Mức lương', 
+                  value: `${job.salary_min?.toLocaleString()} - ${job.salary_max?.toLocaleString()} VND`
+                },
+                { icon: GraduationCap, label: 'Kinh nghiệm', value: jobExperienceLabel[job.experience] }
               ].map(({ icon: Icon, label, value }, i) => (
                 <div key={i} style={{
                   background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)',
@@ -224,26 +232,19 @@ const ViewJobModal = ({ open, onClose, job }) => {
 
           <div style={{ padding: '32px', display: 'grid', gridTemplateColumns: '1fr 400px', gap: 32 }}>
             <div>
-              {['Mô tả công việc', 'Yêu cầu ứng viên', 'Thời gian làm việc', 'Quyền lợi'].map((section, idx) => (
+              {[
+                { title: 'Mô tả công việc', value: job.description },
+                { title: 'Yêu cầu ứng viên', value: job.requirements },
+                { title: 'Thời gian làm việc', value: job.working_shifts },
+                { title: 'Quyền lợi', value: job.benefits }
+              ].map((section, idx) => (
                 <div key={idx} style={{ marginBottom: 32 }}>
-                  <h3 style={{ ...txt(18, 700), marginBottom: 12 }}>{section}</h3>
+                  <h3 style={{ ...txt(18, 700), marginBottom: 12 }}>{section.title}</h3>
+
                   <div style={{ background: C.grayBg, borderRadius: 12, padding: '16px' }}>
-                    <ul style={{ margin: 0, paddingLeft: 20 }}>
-                      {[1, 2, 3].map((i, index, arr) => (
-                        <li
-                            key={i}
-                            style={{
-                            ...txt(14, 400, C.gray),
-                            marginBottom: index === arr.length - 1 ? 0 : 8
-                            }}
-                        >
-                          {section === 'Mô tả công việc' && 'Chúng tôi đang tìm kiếm nhân viên phục vụ part-time năng động'}
-                          {section === 'Yêu cầu ứng viên' && 'Độ tuổi: 18-28 tuổi'}
-                          {section === 'Thời gian làm việc' && 'Ca sáng: 07:00 - 11:00'}
-                          {section === 'Quyền lợi' && 'Lương trả theo tuần qua chuyển khoản'}
-                        </li>
-                      ))}
-                    </ul>
+                    <p style={{ ...txt(14, 400, C.gray), whiteSpace: 'pre-line', margin: 0 }}>
+                      {section.value}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -252,10 +253,10 @@ const ViewJobModal = ({ open, onClose, job }) => {
             <div>
               <h3 style={{ ...txt(18, 700), marginBottom: 16 }}>Thông tin chung</h3>
                 {[
-                { label: 'SỐ LƯỢNG TUYỂN', value: '3 người' },
-                { label: 'HẠN NỘP HỒ SƠ', value: '30/01/2025' },
-                { label: 'CẤP BẬC', value: 'Nhân viên' },
-                { label: 'HỌC VẤN', value: 'Cấp 3 trở lên' }
+                  { label: 'SỐ LƯỢNG TUYỂN', value: `${job.num_slot} người` },
+                  { label: 'HẠN NỘP HỒ SƠ', value: formatDate(job.expiry_date) },
+                  { label: 'CẤP BẬC', value: job.role },
+                  { label: 'HỌC VẤN', value: job.education_level }
                 ].map(({ label, value }, i, arr) => (
                 <div
                     key={i}
@@ -308,7 +309,146 @@ const ViewJobModal = ({ open, onClose, job }) => {
   );
 };
 
-const JobFormModal = ({ open, onClose, job, isEdit }) => {
+const JobFormModal = ({ open, onClose, job, isEdit, onSuccess }) => {
+  const initialFormData = {
+    title: "",
+    role: "Nhân viên",
+    location: "TP. Hồ Chí Minh",
+    experience: 0,
+    education_level: "Không yêu cầu",
+    salary_min: "",
+    salary_max: "",
+    num_slot: 1,
+    expiry_date: "",
+    description: "",
+    requirements: "",
+    benefits: "",
+    working_shifts: "",
+    job_type: "offline"
+  };
+  const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (isEdit && job) {
+      setFormData({
+        title: job.title || "",
+        role: job.role || "Nhân viên",
+        location: job.location || "TP. Hồ Chí Minh",
+        experience: job.experience || 0,
+        education_level: job.education_level || "Không yêu cầu",
+        salary_min: job.salary_min || 0,
+        salary_max: job.salary_max || 0,
+        num_slot: job.num_slot || 1,
+        expiry_date: job.expiry_date || "",
+        description: job.description || "",
+        requirements: job.requirements || "",
+        benefits: job.benefits || "",
+        working_shifts: job.working_shifts || "",
+        job_type: job.job_type || "offline"
+      });
+    }
+  }, [job, isEdit]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ""
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.title.trim()) newErrors.title = "Vui lòng nhập tiêu đề";
+
+    if (!formData.location.trim()) newErrors.location = "Vui lòng nhập địa điểm";
+    
+    if (!formData.salary_min && formData.salary_min !== 0)  newErrors.salary_min = "Vui lòng nhập lương tối thiểu";
+    else if (Number(formData.salary_min) < 0) newErrors.salary_min = "Lương tối thiểu không hợp lệ";
+    
+    if (!formData.salary_max && formData.salary_max !== 0) newErrors.salary_max = "Vui lòng nhập lương tối đa";
+    else if (Number(formData.salary_max) < Number(formData.salary_min)) 
+      newErrors.salary_max = "Lương tối đa phải lớn hơn lương tối thiểu";
+
+    if (!formData.expiry_date) newErrors.expiry_date = "Vui lòng chọn ngày hết hạn";
+    
+    if (!formData.description.trim()) newErrors.description = "Vui lòng nhập mô tả công việc";
+    
+    if (!formData.requirements.trim()) newErrors.requirements = "Vui lòng nhập yêu cầu ứng viên";
+    
+    if (!formData.benefits.trim()) newErrors.benefits = "Vui lòng nhập quyền lợi";
+
+    if (!formData.working_shifts.trim()) newErrors.working_shifts = "Vui lòng nhập thời gian làm việc";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleCreateJob = async () => {
+    if (!validateForm()) return;
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const employerId = user?.emp_id;
+
+      if (!employerId) {
+        console.error("Không tìm thấy employer_id");
+        return;
+      }
+
+      const jobPayload = {
+        job_id: crypto.randomUUID(),
+        employer_id: employerId,
+        ...formData,
+        salary_min: Number(formData.salary_min),
+        salary_max: Number(formData.salary_max),
+        experience: Number(formData.experience),
+        num_slot: Number(formData.num_slot),
+        is_active: true
+      };
+
+      await jobService.addJob(jobPayload);
+      setFormData(initialFormData);
+      onClose();     
+      onSuccess?.("Tạo tin tuyển dụng thành công");
+
+    } catch (err) {
+      console.error("API error:", err);
+    }
+  };
+
+  const handleUpdateJob = async () => {
+    if (!validateForm()) return;
+
+    try {
+      const jobPayload = {
+        job_id: job.job_id,
+        ...formData,
+        salary_min: Number(formData.salary_min),
+        salary_max: Number(formData.salary_max),
+        experience: Number(formData.experience),
+        num_slot: Number(formData.num_slot)
+      };
+
+      await jobService.updateJob(jobPayload);
+
+      onClose();
+      onSuccess?.("Cập nhật tin tuyển dụng thành công");
+
+    } catch (err) {
+      console.error("Update job error:", err);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -342,43 +482,44 @@ const JobFormModal = ({ open, onClose, job, isEdit }) => {
 
           <div style={{ padding: '24px 32px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-              {[
-                { label: 'Tiêu đề tin tuyển dụng', placeholder: 'Nhập tiêu đề tin tuyển dụng', required: true, value: isEdit ? job?.title : '' },
-                { label: 'Ngành nghề', type: 'select', options: ['F&B', 'Bán hàng', 'Giáo dục'], value: isEdit ? 'F&B' : '' },
-                { label: 'Kinh nghiệm yêu cầu', type: 'select', options: ['Không yêu cầu', '1 năm', '2 năm'], value: isEdit ? job?.experience : '' },
-                { label: 'Địa điểm làm việc', type: 'select', options: ['TP. Hồ Chí Minh', 'Hà Nội'], value: isEdit ? 'TP. Hồ Chí Minh' : '' },
-                { label: 'Quận/Huyện', type: 'select', options: ['Quận 1', 'Quận 2', 'Quận 3'], value: isEdit ? 'Quận 3' : '' },
-                { label: 'Số lượng cần tuyển', type: 'number', required: true, value: isEdit ? '3' : '' },
-                { label: 'Mức lương tối thiểu (đồng/giờ)', type: 'number', required: true, value: isEdit ? '50000' : '' },
-                { label: 'Mức lương tối đa (đồng/giờ)', type: 'number', required: true, value: isEdit ? '50000' : '' },
-                { label: 'Hạn nộp hồ sơ', type: 'date', value: isEdit ? '' : '' },
-                { label: 'Trình độ học vấn', type: 'select', options: ['Không yêu cầu', 'THPT', 'Cao đẳng'], value: isEdit ? 'Không yêu cầu' : '' },
-                { label: 'Cấp bậc', type: 'select', options: ['Nhân viên', 'Trưởng nhóm'], value: isEdit ? 'Nhân viên' : '', fullWidth: true }
-              ].map((field, i) => (
-                <div key={i} style={{ gridColumn: field.fullWidth ? '1 / -1' : 'auto' }}>
+              {jobFormFields.map((field, i) => (
+                <div key={i} style={{ gridColumn: 'auto' }}>
                   <label style={{ ...txt(14, 600), display: 'block', marginBottom: 8 }}>
                     {field.label} {field.required && <span style={{ color: C.red }}>*</span>}
                   </label>
                   {field.type === 'select' ? (
-                    <select defaultValue={field.value} style={{
-                      width: '100%', padding: '10px 14px', borderRadius: 8,
-                      border: `1px solid ${C.border}`, fontSize: 14, outline: 'none', appearance: 'none',
-                      background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
-                    }}>
+                    <select 
+                      name={field.name}
+                      value={formData[field.name] || ""}
+                      onChange={handleChange}
+                      style={{
+                        width: '100%', padding: '10px 14px', borderRadius: 8,
+                        border: `1px solid ${C.border}`, fontSize: 14, outline: 'none', appearance: 'none',
+                        background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
+                      }}>
                       {field.options.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
+                        <option key={opt.value || opt} value={opt.value || opt}>
+                          {opt.label || opt}
+                        </option>
                       ))}
                     </select>
                   ) : (
                     <input
-                      type={field.type || 'text'}
-                      defaultValue={field.value}
+                      type={field.type || "text"}
+                      name={field.name}
+                      value={formData[field.name] || ""}
+                      onChange={handleChange}
                       placeholder={field.placeholder}
                       style={{
                         width: '100%', padding: '10px 14px', borderRadius: 8,
                         border: `1px solid ${C.border}`, fontSize: 14, outline: 'none'
                       }}
                     />
+                  )}
+                  {errors[field.name] && (
+                    <div style={{ fontSize: '12px', color: C.red, marginTop: '10px' }}>
+                      {errors[field.name]}
+                    </div>
                   )}
                 </div>
               ))}
@@ -390,14 +531,20 @@ const JobFormModal = ({ open, onClose, job, isEdit }) => {
                   {field} <span style={{ color: C.red }}>*</span>
                 </label>
                 <textarea
-                  placeholder={`Nhập ${field.toLowerCase()}`}
-                  defaultValue={isEdit ? 'Sample content...' : ''}
+                  name={getJobFieldKey(field)}
+                  value={formData[getJobFieldKey(field)]}
+                  onChange={handleChange}
                   style={{
                     width: '100%', minHeight: 100, padding: '12px', borderRadius: 8,
                     border: `1px solid ${C.border}`, fontSize: 14, fontFamily: 'inherit',
                     resize: 'vertical', outline: 'none'
                   }}
                 />
+                {errors[getJobFieldKey(field)] && (
+                  <div style={{ fontSize: '12px', color: C.red, marginTop: '6px' }}>
+                    { errors[getJobFieldKey(field)] }
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -413,11 +560,15 @@ const JobFormModal = ({ open, onClose, job, isEdit }) => {
             }}>
               Hủy
             </button>
-            <button style={{
-              padding: '12px 28px', borderRadius: 10, border: 'none',
-              background: C.blue, color: C.white,
-              fontSize: 15, fontWeight: 600, cursor: 'pointer'
-            }}>
+            <button
+              type="button"
+              onClick={isEdit ? handleUpdateJob : handleCreateJob}
+              style={{
+                padding: '12px 28px', borderRadius: 10, border: 'none',
+                background: C.blue, color: C.white,
+                fontSize: 15, fontWeight: 600, cursor: 'pointer'
+              }}
+            >
               {isEdit ? 'Lưu thay đổi' : 'Đăng tin'}
             </button>
           </div>
@@ -452,7 +603,7 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, jobTitle }) => {
         </div>
         <h2 style={{ ...txt(22, 700), marginBottom: 12 }}>Xác nhận xóa</h2>
         <p style={{ ...txt(15, 400, C.gray), marginBottom: 24 }}>
-          Bạn có chắc chắn muốn xóa tin tuyển dụng "<strong>{jobTitle}</strong>"? 
+          Bạn có chắc chắn muốn xóa tin tuyển dụng <strong>{jobTitle}</strong>? 
           Hành động này không thể hoàn tác.
         </p>
         <div style={{ ...flex('center'), justifyContent: 'center', gap: 12 }}>
@@ -477,97 +628,94 @@ const DeleteConfirmModal = ({ open, onClose, onConfirm, jobTitle }) => {
 };
 
 export default function JobManagementPage() {
-  const jobs = [
-    {
-      id: 1,
-      title: 'Nhân viên Phục vụ',
-      status: 'active',
-      detailedStatus: 'active',
-      statusLabel: 'Đang hoạt động',
-      statusColor: C.greenBg,
-      statusText: C.green,
-      createdDate: '15/10/2025',
-      expiryDate: '30/10/2025',
-      location: 'Quận 3, TP.HCM',
-      salary: '80.000 - 150.000 VNĐ/giờ',
-      experience: 'Không yêu cầu',
-      enabled: true,
-      canToggle: true
-    },
-    {
-      id: 2,
-      title: 'Gia sư Toán - Lý',
-      status: 'pending',
-      detailedStatus: 'pending',
-      statusLabel: 'Chờ duyệt',
-      statusColor: C.blueLight,
-      statusText: C.blue,
-      createdDate: '10/10/2025',
-      expiryDate: '25/10/2025',
-      location: 'Online/Offline',
-      salary: '100.000 - 200.000 VNĐ/giờ',
-      experience: '1 năm',
-      enabled: false,
-      canToggle: false
-    },
-    {
-      id: 3,
-      title: 'Content Creator',
-      status: 'expired',
-      detailedStatus: 'expired',
-      statusLabel: 'Hết hạn',
-      statusColor: C.grayBg,
-      statusText: C.gray,
-      createdDate: '10/10/2025',
-      expiryDate: '25/10/2025',
-      location: 'Quận 1, TP.HCM',
-      salary: '80.000 - 150.000 VNĐ/giờ',
-      experience: 'Không yêu cầu',
-      enabled: false,
-      canToggle: false,
-      showRenew: true
-    },
-    {
-      id: 4,
-      title: 'Nhân viên Bán hàng',
-      status: 'rejected',
-      detailedStatus: 'rejected',
-      statusLabel: 'Từ chối duyệt',
-      statusColor: C.redBg,
-      statusText: C.red,
-      createdDate: '15/10/2025',
-      expiryDate: '30/10/2025',
-      location: 'Quận 1, TP.HCM',
-      salary: '50.000 - 80.000 VNĐ/giờ',
-      experience: 'Không yêu cầu',
-      enabled: false,
-      canToggle: false
-    },
-    {
-      id: 5,
-      title: 'Barista Part-time',
-      status: 'paused',
-      detailedStatus: 'paused',
-      statusLabel: 'Tạm dừng',
-      statusColor: C.yellowBg,
-      statusText: '#f59e0b',
-      createdDate: '10/10/2025',
-      expiryDate: '25/10/2025',
-      location: 'Quận 3, TP.HCM',
-      salary: '60.000 - 90.000 VNĐ/giờ',
-      experience: 'Không yêu cầu',
-      enabled: true,
-      canToggle: true
-    }
-  ];
+  const [jobs, setJobs] = useState([]);
+  const [toast, setToast] = useState(null);
 
-  const [selectedJobs, setSelectedJobs] = useState([]);
+  const reloadJobs = async (message) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
+      const employerId = user?.emp_id;
+      const data = await jobService.getJobsByEmployer(employerId);
+      setJobs(data || []);
+      setToast({ show: false, message: "", type: "success" });
+      setTimeout(() => {
+        setToast({
+          show: true,
+          message,
+          type: "success"
+        });
+      }, 50);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteJob = async (jobId) => {
+    try {
+      await jobService.deleteJob(jobId);
+      setJobs(prev => prev.filter(job => job.job_id !== jobId));
+      setToast({ show: false, message: "", type: "success" });
+
+      setTimeout(() => {
+        setToast({
+          show: true,
+          message: "Xóa tin tuyển dụng thành công",
+          type: "success"
+        });
+      }, 50);
+
+    } catch (err) {
+      setToast({ show: false, message: "", type: "error" });
+
+      setTimeout(() => {
+        setToast({
+          show: true,
+          message: "Xóa tin thất bại",
+          type: "error"
+        });
+      }, 50);
+    }
+  };
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        const employerId = user?.emp_id;
+
+        if (!employerId) {
+          console.error("Không tìm thấy employer");
+          return;
+        }
+
+        const data = await jobService.getJobsByEmployer(employerId);
+        setJobs(data || []);
+
+      } catch (err) {
+        console.error("Lỗi lấy job:", err);
+      }
+    };
+    fetchJobs();
+  }, []);
+
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [renewModalOpen, setRenewModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
+
+  const fetchJobDetail = async (jobId) => {
+    try {
+      const job = await jobService.getJobById(jobId);
+      setSelectedJob(job);
+      setViewModalOpen(true);
+    } catch (err) {
+      console.error("Lỗi lấy chi tiết job:", err);
+    }
+  };
+
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
   const total = jobs.length;
@@ -577,28 +725,13 @@ export default function JobManagementPage() {
   const currentJobs = jobs.slice(start, end);
 
   const stats = [
-    { icon: Briefcase, label: 'Tổng tin đăng', value: 24, bgColor: C.grayBg },
+    { icon: Briefcase, label: 'Tổng tin đăng', value: jobs.length, bgColor: C.grayBg },
     { icon: TrendingUp, label: 'Đang hoạt động', value: 18, bgColor: C.greenBg },
     { icon: Hourglass, label: 'Chờ duyệt', value: 3, bgColor: C.blueLight },
     { icon: PauseCircle, label: 'Tạm dừng', value: 4, bgColor: C.yellowBg },
     { icon: Clock, label: 'Hết hạn', value: 2, bgColor: C.grayBg },
     { icon: XCircle, label: 'Từ chối duyệt', value: 2, bgColor: C.redBg }
   ];
-
-  const displayJobs = jobs;
-
-  const handleCheckJob = (jobId) => {
-    if (selectedJobs.includes(jobId)) {
-      setSelectedJobs(selectedJobs.filter(id => id !== jobId));
-    } else {
-      setSelectedJobs([...selectedJobs, jobId]);
-    }
-  };
-
-  const handleDeleteSelected = () => {
-    console.log('Deleting jobs:', selectedJobs);
-    setSelectedJobs([]);
-  };
 
   return (
     <div style={{
@@ -688,11 +821,6 @@ export default function JobManagementPage() {
             <option value="paused">Tạm dừng</option>
             <option value="rejected">Từ chối</option>
           </select>
-          <input type="date" style={{
-            padding: '10px 14px', borderRadius: 8,
-            border: `1px solid ${C.border}`,
-            fontSize: 14, outline: 'none', minWidth: 150
-          }} />
           <button style={{
             padding: '10px 32px', borderRadius: 8,
             border: 'none', background: C.purple,
@@ -717,31 +845,12 @@ export default function JobManagementPage() {
                 ...flex('center'),
                 justifyContent: 'space-between'
               }}>
-                <h2 style={{ ...txt(18, 700) }}>Danh sách tin tuyển dụng ({displayJobs.length})</h2>
-                {selectedJobs.length > 0 && (
-                  <div style={{ ...flex('center'), gap: 8 }}>
-                    <span style={{ ...txt(14, 500, C.gray) }}>Đã chọn: {selectedJobs.length}</span>
-                    <button
-                      onClick={handleDeleteSelected}
-                      style={{
-                        padding: '8px 16px', borderRadius: 8,
-                        border: 'none', background: C.red,
-                        color: C.white, fontSize: 13, fontWeight: 600,
-                        cursor: 'pointer', ...flex('center'), gap: 6
-                      }}
-                    >
-                      <Trash2 size={14} /> Xóa
-                    </button>
-                  </div>
-                )}
+                <h2 style={{ ...txt(18, 700) }}>Danh sách tin tuyển dụng ({currentJobs.length})</h2>
               </div>
 
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: C.grayBg }}>
-                    <th style={{ width: 40, padding: '16px 20px' }}>
-                      <input type="checkbox" style={{ cursor: 'pointer' }} />
-                    </th>
                     {['TIN TUYỂN DỤNG', 'TRẠNG THÁI', 'NGÀY ĐĂNG', 'NGÀY HẾT HẠN', 'HIỂN THỊ', 'THAO TÁC'].map(h => (
                       <th key={h} style={{
                         ...txt(12, 700, C.gray),
@@ -755,16 +864,8 @@ export default function JobManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayJobs.map(job => (
-                <tr key={job.id} style={{ borderTop: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '16px 20px' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedJobs.includes(job.id)}
-                      onChange={() => handleCheckJob(job.id)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                  </td>
+                  {currentJobs.map(job => (
+                <tr key={job.job_id} style={{ borderTop: `1px solid ${C.border}` }}>
                   <td style={{ padding: '16px 20px' }}>
                     <span style={{ ...txt(14, 600) }}>{job.title}</span>
                   </td>
@@ -821,10 +922,7 @@ export default function JobManagementPage() {
                   <td style={{ padding: '16px 20px' }}>
                     <div style={{ ...flex('center'), gap: 8 }}>
                       <button
-                        onClick={() => {
-                          setSelectedJob(job);
-                          setViewModalOpen(true);
-                        }}
+                        onClick={() => fetchJobDetail(job.job_id)}
                         title="Xem chi tiết"
                         style={{
                           width: 36, height: 36, borderRadius: 8,
@@ -925,7 +1023,6 @@ export default function JobManagementPage() {
               </div>
             </>
           ) : (
-            /* Empty State */
             <div style={{
               padding: '80px 40px',
               textAlign: 'center'
@@ -969,12 +1066,14 @@ export default function JobManagementPage() {
         }}
         job={selectedJob}
         isEdit={true}
+        onSuccess={reloadJobs}
       />
 
       <JobFormModal
         open={createModalOpen}
         onClose={() => setCreateModalOpen(false)}
         isEdit={false}
+        onSuccess={reloadJobs}
       />
 
       <DeleteConfirmModal
@@ -983,8 +1082,8 @@ export default function JobManagementPage() {
           setDeleteModalOpen(false);
           setSelectedJob(null);
         }}
-        onConfirm={() => {
-          console.log('Deleted:', selectedJob);
+        onConfirm={async () => {
+          await handleDeleteJob(selectedJob.job_id);
           setDeleteModalOpen(false);
           setSelectedJob(null);
         }}
@@ -999,6 +1098,14 @@ export default function JobManagementPage() {
         }}
         job={selectedJob}
       />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

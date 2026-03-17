@@ -370,25 +370,12 @@ export default function UserManagementPage() {
     { icon: Ban, label: "Đã khóa", value: users.filter(u => u.status === "blocked").length }
   ];
 
-  const handleCheckUser = (userId) => {
-    if (selectedUsers.includes(userId)) {
-      setSelectedUsers(selectedUsers.filter(id => id !== userId));
-    } else {
-      setSelectedUsers([...selectedUsers, userId]);
-    }
-  };
-
   const handleLockUser = (user) => {
     setSelectedUser(user);
     setIsUnlockAction(user.status === 'blocked');
     setLockModalOpen(true);
   };
-
-  const handleDeleteSelected = () => {
-    console.log('Bulk delete:', selectedUsers);
-    setSelectedUsers([]);
-  };
-
+  
   return (
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",

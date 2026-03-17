@@ -3,6 +3,7 @@ import { Eye, EyeOff, Shield, Key, CheckCircle2 } from 'lucide-react';
 import { COLORS } from '../constants/colors';
 import { flex, txt } from '../utils/styles';
 import { getCurrentUser, updateUser } from "../services/authService";
+import Toast from "../components/Toast";
 
 const C = COLORS;
 
@@ -16,7 +17,7 @@ const PasswordField = ({ label, value, onChange, placeholder }) => {
       </label>
       <div style={{ position: 'relative' }}>
         <input
-          type={show ? 'password' : 'text'}
+          type={show ? 'text' : 'password'}
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
@@ -35,7 +36,7 @@ const PasswordField = ({ label, value, onChange, placeholder }) => {
             padding: 4, ...flex('center')
           }}
         >
-          {show ? <EyeOff size={18} color={C.gray} /> : <Eye size={18} color={C.gray} />}
+          {show ? <Eye size={18} color={C.gray} /> : <EyeOff size={18} color={C.gray} />}
         </button>
       </div>
     </div>
@@ -80,30 +81,26 @@ export default function ChangePasswordPage() {
     new: '',
     confirm: ''
   });
+  const [toast, setToast] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       const currentUser = getCurrentUser();
 
-      if (!currentUser) {
-        alert("Bạn chưa đăng nhập");
-        return;
-      }
-
       if (passwords.current !== currentUser.password) {
-        alert("Mật khẩu hiện tại không đúng");
+        setToast({ message: "Mật khẩu hiện tại không đúng", type: "error" });
         return;
       }
 
       if (passwords.new !== passwords.confirm) {
-        alert("Mật khẩu xác nhận không khớp");
+        setToast({ message: "Mật khẩu xác nhận không khớp", type: "warning" });
         return;
       }
 
-      if (passwords.new.length < 6) {
-        alert("Mật khẩu mới phải ít nhất 6 ký tự");
+      if (passwords.new.length < 8) {
+        setToast({ message: "Mật khẩu mới phải ít nhất 8 ký tự", type: "warning" });
         return;
       }
 
@@ -112,8 +109,10 @@ export default function ChangePasswordPage() {
         password: passwords.new
       };
 
-      updateUser(updatedUser);
-      alert("Đổi mật khẩu thành công");
+      await updateUser(updatedUser);
+
+      setToast({ message: "Đổi mật khẩu thành công", type: "success" });
+
       setPasswords({
         current: "",
         new: "",
@@ -121,7 +120,7 @@ export default function ChangePasswordPage() {
       });
 
     } catch (err) {
-      alert(err.message);
+      setToast({ message: err.message, type: "error" });
     }
   };
 
@@ -232,6 +231,14 @@ export default function ChangePasswordPage() {
           </div>
         </div>
       </main>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       <style>{`
         input:focus {

@@ -891,7 +891,6 @@ export default function CompanyManagementPage() {
         </div>
       </main>
 
-      {/* Modals */}
       <CompanyDetailModal
         open={viewModalOpen}
         onClose={() => {

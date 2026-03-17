@@ -126,6 +126,11 @@ export const getProfile = async (email) => {
   return userData;
 };
 
+export const getUserById = async (id) => {
+  const res = await apiRequest(`/v1/candidate/get_by_id?id=${id}`);
+  return res.candidate;
+};
+
 export const updateUser = async (userData) => {
   await apiRequest("/v1/candidate/update_info", {
     method: "POST",

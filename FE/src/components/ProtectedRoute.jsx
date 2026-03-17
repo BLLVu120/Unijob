@@ -3,9 +3,7 @@ import { useAuth } from "../context/AuthContext";
 
 const ProtectedRoute = ({ allowedRoles = [], internal = false }) => {
   const { user, internalUser, loading } = useAuth();
-
   if (loading) return null;
-
   const currentUser = internal ? internalUser : user;
 
   if (!currentUser) {

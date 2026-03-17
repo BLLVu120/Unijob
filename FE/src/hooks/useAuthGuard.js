@@ -13,7 +13,7 @@ export const useAuthGuard = () => {
         if (user.role === "employer") await getEmployerProfile(user.email);
         else await getProfile(user.email);
       } catch (err) {
-          logoutUser();
+        logoutUser();
       }
     };
 

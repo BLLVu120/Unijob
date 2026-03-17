@@ -13,3 +13,10 @@ export const formatDate = (date) => {
   const year = d.getFullYear();
   return `${day}/${month}/${year}`;
 };
+
+export const formatTime = (date) =>
+  new Date(date + "Z").toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Ho_Chi_Minh"
+  });

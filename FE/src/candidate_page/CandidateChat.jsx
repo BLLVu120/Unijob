@@ -1,17 +1,13 @@
-import { useState } from 'react';
-import { Search, Paperclip, Image, SendHorizontal } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, SendHorizontal } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
+import { getConversations, getMessages, sendMessage } from "../services/messageService";
+import { getCurrentUser, getEmployerById } from "../services/authService";
+import { getInitials, formatTime } from '../utils/textUtils';
 const C = COLORS;
 
 const ConversationItem = ({ conversation, active, onClick }) => {
-  const avatarColors = {
-    'CH': C.purple,
-    'NV': C.purple,
-    'MC': C.purple,
-    'HN': C.purple
-  };
-
   return (
     <div
       onClick={onClick}
@@ -29,18 +25,13 @@ const ConversationItem = ({ conversation, active, onClick }) => {
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <div style={{
             width: 48, height: 48, borderRadius: '50%',
-            background: avatarColors[conversation.avatar] || C.blue,
+            background: C.purple,
             ...flex('center'), justifyContent: 'center'
           }}>
-            <span style={{ ...txt(16, 700, C.white) }}>{conversation.avatar}</span>
+            <span style={{ ...txt(16, 700, C.white) }}>
+              {getInitials(conversation.company || "")}
+            </span>
           </div>
-          {conversation.online && (
-            <div style={{
-              position: 'absolute', bottom: 0, right: 0,
-              width: 12, height: 12, borderRadius: '50%',
-              background: C.green, border: `2px solid ${C.white}`
-            }} />
-          )}
         </div>
 
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
@@ -57,10 +48,7 @@ const ConversationItem = ({ conversation, active, onClick }) => {
             whiteSpace: 'nowrap',
             marginBottom: 4
           }}>
-            {conversation.lastMessage}
-          </p>
-          <p style={{ ...txt(12, 500, C.grayLight) }}>
-            Việc ứng tuyển: <span style={{ color: C.navy }}>{conversation.position}</span>
+            {conversation.lastMessage || ""}
           </p>
         </div>
 
@@ -112,96 +100,144 @@ const MessageBubble = ({ message, isOwn }) => (
 );
 
 export default function MessagesPage() {
-  const [activeConversation, setActiveConversation] = useState(0);
-  const [messageText, setMessageText] = useState('');
+  const [activeConversation, setActiveConversation] = useState(null);
+  const [messageText, setMessageText] = useState("");
+  const [conversations, setConversations] = useState([]);
+  const [messages, setMessages] = useState([]);
 
-  const conversations = [
-    {
-      id: 0,
-      avatar: 'CH',
-      company: 'The Coffee House',
-      lastMessage: 'Em nhớ mang theo CV và giấy tờ tùy...',
-      time: '10:30',
-      position: 'Nhân viên Phục vụ',
-      online: true
-    },
-    {
-      id: 1,
-      avatar: 'NV',
-      company: 'Fashion Store ABC',
-      lastMessage: 'Chúng tôi sẽ liên hệ lại với em trong tuần...',
-      time: '09:15',
-      position: 'Nhân viên Bán hàng'
-    },
-    {
-      id: 2,
-      avatar: 'MC',
-      company: 'TutorVN',
-      lastMessage: 'Em có thể gửi bảng lịch nghỉ cho anh xem được không?',
-      time: 'Hôm qua',
-      position: 'Gia sư Toán - Lý'
-    },
-    {
-      id: 3,
-      avatar: 'MC',
-      company: 'Digital Agency XYZ',
-      lastMessage: 'Cảm ơn em đã ứng tuyển vào vị trí này...',
-      time: 'Hôm qua',
-      position: 'Content Writer',
-      unread: 2
-    },
-    {
-      id: 4,
-      avatar: 'HN',
-      company: 'Creative Studio',
-      lastMessage: 'Portfolio của em rất ấn tượng',
-      time: 'Hôm qua',
-      position: 'Graphic Designer'
-    }
-  ];
+  const bottomRef = useRef(null);
 
-  const messages = [
-    {
-      text: 'Chào em Tuyết Anh, anh đã xem hồ sơ của em rồi. Em có thể đến phỏng vấn vào thứ 3 tuần sau được không?',
-      time: '09:32',
-      isOwn: false
-    },
-    {
-      text: 'Dạ chào anh a. Em có thể đến phỏng vấn vào thứ 3 tuần sau a.',
-      time: '09:30',
-      isOwn: true
-    },
-    {
-      text: 'Anh cho em hỏi địa chỉ và thời gian cụ thể với ạ?',
-      time: '09:35',
-      isOwn: true
-    },
-    {
-      text: 'Được em. Địa chỉ là The Coffee House chi nhánh Quận 1, số 123 Đường ABC. Em đến lúc 2 giờ chiều nhé.',
-      time: '09:32',
-      isOwn: false
-    },
-    {
-      text: 'Em nhớ mang theo CV và giấy tờ tùy thân nhé.',
-      time: '09:32',
-      isOwn: false
-    },
-    {
-      text: 'Dạ em cảm ơn anh/chị a! Em sẽ đến đúng giờ.',
-      time: '09:35',
-      isOwn: true
-    }
-  ];
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const user = getCurrentUser();
+        const currentUserId = user?.candidate_id || user?.emp_id;
+        const data = await getConversations(currentUserId);
+        const sorted = (data || []).sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
 
-  const handleSend = () => {
-    if (messageText.trim()) {
-      console.log('Sending:', messageText);
-      setMessageText('');
+        const employerCache = {};
+
+        const mapped = await Promise.all(
+          sorted.map(async (message) => {
+            const employerId = message.sender_id === currentUserId ? message.receiver_id : message.sender_id;
+            if (!employerCache[employerId]) employerCache[employerId] = await getEmployerById(employerId);
+            const employer = employerCache[employerId];
+
+            return {
+              id: message.message_id,
+              employerId,
+              company: employer?.emp_name || "Nhà tuyển dụng",
+              lastMessage: message.content,
+              time: formatTime(message.created_at),
+              senderId: message.sender_id
+            };
+          })
+        );
+
+        const unique = {};
+        mapped.forEach(c => {
+          if (!unique[c.employerId]) unique[c.employerId] = c;
+        });
+
+        const conversationsList = Object.values(unique);
+        setConversations(conversationsList);
+        const latestMessage = sorted[0];
+
+        if (latestMessage) {
+          const employerId = latestMessage.sender_id === currentUserId ? latestMessage.receiver_id : latestMessage.sender_id;
+          const selectedConversation = conversationsList.find(
+            c => c.employerId === employerId
+          );
+
+          if (selectedConversation) setActiveConversation(selectedConversation);
+        }
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchConversations();
+  }, []);
+
+  useEffect(() => {
+    if (!activeConversation?.employerId) return;
+
+    const fetchMessages = async () => {
+      try {
+        const user = getCurrentUser();
+        const currentUserId = user?.candidate_id || user?.emp_id;
+        const data = await getMessages(currentUserId, activeConversation.employerId);
+        const mapped = (data || [])
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+          .map(m => ({
+            text: m.content,
+            time: formatTime(m.created_at),
+            isOwn: m.sender_id === currentUserId
+          }));
+
+        setMessages(mapped);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 3000);
+    return () => clearInterval(interval);
+  }, [activeConversation]);
+
+  const handleSend = async () => {
+    if (!messageText.trim() || !activeConversation) return;
+    try {
+      const user = getCurrentUser();
+      const payload = {
+        sender_id: user.candidate_id || user.emp_id,
+        receiver_id: activeConversation.employerId,
+        content: messageText
+      };
+
+      await sendMessage(payload);
+
+      const currentUserId = user.candidate_id || user.emp_id;
+
+      const data = await getMessages(currentUserId, activeConversation.employerId);
+
+      const mapped = (data || [])
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+        .map(m => ({
+          text: m.content,
+          time: formatTime(new Date()),
+          isOwn: m.sender_id === currentUserId
+        }));
+
+      setMessages(mapped);
+      setConversations(prev => {
+        const updated = prev.map(conv =>
+          conv.employerId === activeConversation.employerId
+            ? {
+                ...conv,
+                lastMessage: messageText,
+                time: formatTime(new Date())
+              }
+            : conv
+        );
+
+        const active = updated.find(c => c.employerId === activeConversation.employerId);
+        const others = updated.filter(c => c.employerId !== activeConversation.employerId);
+
+        return [active, ...others];
+      });
+
+      setMessageText("");
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -251,10 +287,10 @@ export default function MessagesPage() {
               <ConversationItem
                 key={conv.id}
                 conversation={conv}
-                active={activeConversation === conv.id}
-                onClick={() => setActiveConversation(conv.id)}
+                active={activeConversation?.id === conv.id}
+                onClick={() => setActiveConversation(conv)}
               />
-            ))}
+              ))}
           </div>
         </div>
 
@@ -276,7 +312,9 @@ export default function MessagesPage() {
               ...flex('center'), justifyContent: 'center',
               position: 'relative'
             }}>
-              <span style={{ ...txt(16, 700, C.white) }}>CH</span>
+              <span style={{ ...txt(16, 700, C.white) }}>
+                {getInitials(activeConversation?.company || "")}
+              </span>
               <div style={{
                 position: 'absolute', bottom: 0, right: 0,
                 width: 12, height: 12, borderRadius: '50%',
@@ -284,8 +322,7 @@ export default function MessagesPage() {
               }} />
             </div>
             <div>
-              <h3 style={{ ...txt(17, 600) }}>The Coffee House</h3>
-              <p style={{ ...txt(13, 400, C.green) }}>Đang hoạt động</p>
+              <h3 style={{ ...txt(17, 600) }}>{activeConversation?.company}</h3>
             </div>
           </div>
 
@@ -298,6 +335,7 @@ export default function MessagesPage() {
             {messages.map((msg, i) => (
               <MessageBubble key={i} message={msg} isOwn={msg.isOwn} />
             ))}
+            <div ref={bottomRef} />
           </div>
 
           <div style={{

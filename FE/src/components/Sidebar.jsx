@@ -17,7 +17,7 @@ const Sidebar = ({ isEmployer }) => {
     { icon: Building2, label: 'Hồ sơ công ty', path: '/employer/company-profile' },
     { icon: FileText, label: 'Tin tuyển dụng', path: '/employer/jobs' },
     { icon: Users, label: 'Ứng viên', path: '/employer/candidates' },
-    { icon: MessageSquare, label: 'Tin nhắn', badge: 3, path: '/employer/messages' },
+    { icon: MessageSquare, label: 'Tin nhắn', path: '/employer/messages' },
     { icon: CreditCard, label: 'Đăng kí gói', path: '/employer/subscription' },
     { icon: Receipt, label: 'Lịch sử giao dịch', path: '/employer/transactions' },
     { icon: ShieldCheck, label: 'Xác thực', path: '/employer/verification' }
@@ -27,7 +27,7 @@ const Sidebar = ({ isEmployer }) => {
     { icon: User, label: 'Hồ sơ cá nhân', path: '/candidate/profile' },
     { icon: Bookmark, label: 'Việc đã lưu', path: '/candidate/saved-jobs' },
     { icon: Send, label: 'Việc đã ứng tuyển', path: '/candidate/applied-jobs' },
-    { icon: MessageSquare, label: 'Tin nhắn', badge: 3, path: '/candidate/messages' },
+    { icon: MessageSquare, label: 'Tin nhắn', path: '/candidate/messages' },
     { icon: Lock, label: 'Đổi mật khẩu', path: '/candidate/change-password' }
   ];
 
@@ -71,18 +71,6 @@ const Sidebar = ({ isEmployer }) => {
               <span style={{ ...txt(14, 500, isActive ? C.blue : C.navy) }}>
                 {item.label}
               </span>
-
-              {item.badge && (
-                <span style={{
-                  ...txt(11, 600, C.white),
-                  background: C.red,
-                  borderRadius: 10,
-                  padding: '3px 10px',
-                  marginLeft: 'auto'
-                }}>
-                  {item.badge}
-                </span>
-              )}
             </div>
           );
         })}
