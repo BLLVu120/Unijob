@@ -1,18 +1,17 @@
-import { useState } from 'react';
-import {
-  Search, MapPin, Briefcase, Heart, Info,
-  ChevronLeft, ChevronRight, Clock, Coffee, GraduationCap,
-  ShoppingCart, Palette
-} from 'lucide-react';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import { Search, MapPin, Briefcase, Info, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
+import { BG } from '../constants/backgrounds';
+import { createdAt } from '../utils/textUtils';
+import { jobService } from "../services/jobService";
+import { getEmployerById } from "../services/authService";
 
 const C = COLORS;
 const JobCard = ({ job }) => {
-  const [saved, setSaved] = useState(false);
-  const IconComponent = job.icon;
+  const navigate = useNavigate();
+  const IconComponent = job.icon || Briefcase;
 
   return (
     <div style={{
@@ -32,7 +31,6 @@ const JobCard = ({ job }) => {
       e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
     }}
     >
-      {/* Header */}
       <div style={{ 
         ...flex('flex-start'), 
         gap: 16,
@@ -73,15 +71,12 @@ const JobCard = ({ job }) => {
               ...flex('center'),
               gap: 4
             }}>
-              <Clock size={14} /> {job.posted}
+              <Clock size={14} /> {createdAt(job.created_at)}
             </span>
           </div>
 
           <div style={{ ...flex('center'), gap: 6, marginBottom: 8 }}>
-            <span style={{ ...txt(14, 500, C.blue) }}>{job.company}</span>
-            {job.verified && (
-              <FontAwesomeIcon icon={faCheckCircle} size="sm" color={COLORS.blue} />
-            )}
+            <span style={{ ...txt(14, 500, C.blue) }}>{job.emp_name}</span>
           </div>
 
           <div style={{ ...flex('center'), gap: 16 }}>
@@ -91,7 +86,7 @@ const JobCard = ({ job }) => {
             </div>
             <div style={{ ...flex('center'), gap: 4 }}>
               <Briefcase size={14} color={C.gray} />
-              <span style={{ ...txt(13, 400, C.gray) }}>{job.requirement}</span>
+              <span style={{ ...txt(13, 400, C.gray) }}>{job.education_level}</span>
             </div>
           </div>
         </div>
@@ -106,19 +101,19 @@ const JobCard = ({ job }) => {
             Mức lương
           </span>
           <span style={{ ...txt(16, 700, C.blueText) }}>
-            {job.salary}
+            {job.salary_min?.toLocaleString()} - {job.salary_max?.toLocaleString()} VNĐ
           </span>
         </div>
 
         <div style={{ ...flex('center'), gap: 8 }}>
           <button
-            onClick={() => setSaved(!saved)}
+            onClick={() => navigate(`/job/${job.job_id}`)}
             style={{
               padding: '8px 16px',
               borderRadius: 20,
-              background: saved ? '#fdf2f8' : C.white,
-              border: `1px solid ${saved ? C.pink : C.border}`,
-              color: saved ? C.pink : C.navy,
+              border: 'none',
+              background: C.blue,
+              color: C.white,
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -126,30 +121,8 @@ const JobCard = ({ job }) => {
               gap: 6,
               transition: 'all 0.2s'
             }}
-          >
-            <Heart 
-              size={14} 
-              fill={saved ? C.pink : 'none'} 
-              color={saved ? C.pink : C.navy}
-            />
-            Lưu tin
-          </button>
-
-          <button style={{
-            padding: '8px 16px',
-            borderRadius: 20,
-            border: 'none',
-            background: C.blue,
-            color: C.white,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-            ...flex('center'),
-            gap: 6,
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = C.blueText}
-          onMouseLeave={e => e.currentTarget.style.background = C.blue}
+            onMouseEnter={e => e.currentTarget.style.background = C.blueText}
+            onMouseLeave={e => e.currentTarget.style.background = C.blue}
           >
             <Info size={14} /> Chi tiết
           </button>
@@ -163,53 +136,45 @@ export default function PartTimeJobsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [industry, setIndustry] = useState('');
   const [location, setLocation] = useState('');
+  const [jobs, setJobs] = useState([]);
 
-  const jobs = [
-    {
-      id: 1,
-      title: 'Nhân viên Phục vụ Part-time',
-      company: 'The Coffee House',
-      location: 'Quận 1, TP.HCM',
-      requirement: 'Không yêu cầu',
-      salary: '25.000-30.000 VNĐ/giờ',
-      posted: '2 giờ trước',
-      verified: true,
-      icon: Coffee
-    },
-    {
-      id: 2,
-      title: 'Gia sư Toán - Lý',
-      company: 'TutorVN',
-      location: 'Online/Offline',
-      requirement: '1 năm',
-      salary: '100.000-200.000 VNĐ/giờ',
-      posted: '4 giờ trước',
-      verified: true,
-      icon: GraduationCap
-    },
-    {
-      id: 3,
-      title: 'Nhân viên Bán hàng Cuối tuần',
-      company: 'Fashion Store ABC',
-      location: 'Quận 3, TP.HCM',
-      requirement: 'Không yêu cầu',
-      salary: '22.000-28.000 VNĐ/giờ',
-      posted: '1 ngày trước',
-      verified: true,
-      icon: ShoppingCart
-    },
-    {
-      id: 4,
-      title: 'Graphic Designer Part-time',
-      company: 'Creative Studio Pro',
-      location: 'Quận 1, TP.HCM',
-      requirement: 'Không yêu cầu',
-      salary: '30.000-40.000 VNĐ/giờ',
-      posted: '2 ngày trước',
-      verified: true,
-      icon: Palette
+  const handleViewDetail = async (jobId) => {
+    try {
+      const data = await jobService.getJobById(jobId);
+      setJobDetail(data);
+      console.log("Job detail:", data);
+    } catch (err) {
+      console.error("Lỗi lấy job:", err);
     }
-  ];
+  };
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const jobs = await jobService.getAllJobs();
+        const employerCache = {};
+        const jobsWithCompany = await Promise.all(
+          jobs.map(async (job) => {
+            if (!employerCache[job.employer_id]) {
+              employerCache[job.employer_id] = await getEmployerById(job.employer_id);
+            }
+
+            return {
+              ...job,
+              emp_name: employerCache[job.employer_id]?.emp_name
+            };
+          })
+        );
+
+        setJobs(jobsWithCompany);
+
+      } catch (err) {
+        console.error("Lỗi lấy jobs:", err);
+      }
+    };
+
+    fetchJobs();
+  }, []);
 
   return (
     <div style={{
@@ -291,7 +256,7 @@ export default function PartTimeJobsPage() {
                 cursor: 'pointer',
                 minWidth: 180,
                 appearance: 'none',
-                background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 16px center`
+                background: `${C.white} ${BG.dropdown}`
               }}
             >
               <option value="">Tất cả ngành nghề</option>
@@ -313,13 +278,12 @@ export default function PartTimeJobsPage() {
                 cursor: 'pointer',
                 minWidth: 180,
                 appearance: 'none',
-                background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 16px center`
+                background: `${C.white} ${BG.dropdown}`
               }}
             >
               <option value="">Tất cả địa điểm</option>
               <option value="hanoi">Hà Nội</option>
               <option value="hcm">TP. Hồ Chí Minh</option>
-              <option value="danang">Đà Nẵng</option>
             </select>
 
             <button style={{
@@ -354,9 +318,13 @@ export default function PartTimeJobsPage() {
           gap: 24,
           marginBottom: 48
         }}>
-          {jobs.map(job => (
-            <JobCard key={job.id} job={job} />
-          ))}
+        {jobs.map(job => (
+          <JobCard
+            key={job.job_id}
+            job={job}
+            onViewDetail={handleViewDetail}
+          />
+        ))}
         </div>
 
         <div style={{

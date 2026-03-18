@@ -3,6 +3,7 @@ import { Search, Download, CheckCircle, XCircle, FileText } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
 import { pageBtnStyle } from "../constants/pageBtnStyle";
+import { BG } from '../constants/backgrounds';
 const C = COLORS;
 
 export default function TransactionHistoryPage() {
@@ -119,7 +120,7 @@ export default function TransactionHistoryPage() {
               fontSize: 14, outline: 'none', cursor: 'pointer',
               minWidth: 180,
               appearance: 'none',
-              background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
+              background: `${C.white} ${BG.dropdown}`
             }}
           >
             <option value="">Tất cả trạng thái</option>
@@ -136,7 +137,7 @@ export default function TransactionHistoryPage() {
               fontSize: 14, outline: 'none', cursor: 'pointer',
               minWidth: 180,
               appearance: 'none',
-              background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
+              background: `${C.white} ${BG.dropdown}`
             }}
           >
             <option value="">Tất cả gói</option>

@@ -51,7 +51,7 @@ export default function App() {
         <Route path="/verification-success" element={<VerificationConfirmationPage />} />
 
         <Route path="/jobs" element={<JobPage />} />
-        <Route path="/job-detail" element={<JobDetailPage />} />
+        <Route path="/job/:id" element={<JobDetailPage />} />
 
         <Route path="/company" element={<CompanyPage />} />
         <Route path="/company-detail" element={<CompanyDetailPage />} />
@@ -71,7 +71,7 @@ export default function App() {
             <Route path="subscription" element={<Subscription />} />
             <Route path="transactions" element={<TransactionHistory />} />
             <Route path="verification" element={<CompanyVerification />} />
-            <Route path="messages" element={<CompanyChat />} />
+            <Route path="messages/:candidateId" element={<CompanyChat />} />
             <Route path="candidates" element={<CandidateList />} />
             <Route path="jobs" element={<JobManagement />} />
           </Route>

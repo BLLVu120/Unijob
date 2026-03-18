@@ -1,17 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  FileText, MessageSquare, Search, Eye, MessageCircle, Briefcase,
-  MapPin, GraduationCap, Download,
-  X, CheckCircle, Clock, AlertCircle, Info, Coffee, Monitor
+  FileText, Search, Eye, MessageCircle, Briefcase,
+  MapPin, GraduationCap, Download, X, AlertCircle, Info
 } from 'lucide-react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
+import { formatDate, createdAt } from '../utils/textUtils';
+import { applicationService } from "../services/applicationService";
+import { getCurrentUser, getEmployerById } from "../services/authService";
+import { feedbackService } from '../services/feedbackService';
+import { jobService } from "../services/jobService";
 const C = COLORS;
 
-const ApplicationModal = ({ open, onClose }) => {
-  if (!open) return null;
+const ApplicationModal = ({ open, onClose, application }) => {
+  const [feedback, setFeedback] = useState("");
+  
+  useEffect(() => {
+    const fetchFeedback = async () => {
+      try {
+        const user = getCurrentUser();
+        if (!application || !user?.candidate_id) return;
+
+        const employerId = application?.employer_id;
+        if (!employerId) return;
+
+        const res = await feedbackService.getByEmployer(employerId);
+        const list = res.feedbacks || [];
+        const matched = list.find(f =>
+          f.candidate_id === user.candidate_id && f.job_id === application.job_id
+        );
+        setFeedback(matched?.comment || "");
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchFeedback();
+  }, [application?.job_id]);
+
+  if (!open || !application) return null;
 
   return (
     <>
@@ -74,13 +104,10 @@ const ApplicationModal = ({ open, onClose }) => {
                 <X size={20} color={C.white} />
             </button>
             </div>
-            <h2 style={{ ...txt(28, 700, C.white), marginBottom: 8 }}>
-              Nhân viên Phục vụ Part-time
-            </h2>
+            <h2 style={{ ...txt(28, 700, C.white), marginBottom: 8 }}>{application?.title}</h2>
             <div style={{ ...flex('center'), gap: 6 }}>
               <Briefcase size={18} color={C.white} />
-              <span style={{ ...txt(16, 500, C.white) }}>The Coffee House</span>
-              <FontAwesomeIcon icon={faCheckCircle} color={C.white} />
+              <span style={{ ...txt(16, 500, C.white) }}>{application?.company}</span>
             </div>
 
             <div style={{
@@ -88,9 +115,9 @@ const ApplicationModal = ({ open, onClose }) => {
               gap: 16, marginTop: 24
             }}>
               {[
-                { label: 'Địa điểm', value: 'Quận 3, TP.HCM', icon: MapPin },
-                { label: 'Mức lương', value: '80.000 - 150.000 VNĐ/giờ', icon: Briefcase },
-                { label: 'Kinh nghiệm', value: 'Không yêu cầu', icon: GraduationCap }
+                { label: 'Địa điểm', value: application?.location || "N/A", icon: MapPin },
+                { label: 'Mức lương', value: application?.salary || "N/A", icon: Briefcase },
+                { label: 'Kinh nghiệm', value: application?.experience ?? "Không yêu cầu", icon: GraduationCap }
               ].map(({ label, value, icon: Icon }, i) => (
                 <div key={i} style={{
                   background: 'rgba(255,255,255,0.15)',
@@ -111,70 +138,6 @@ const ApplicationModal = ({ open, onClose }) => {
 
           <div style={{ padding: '32px', display: 'grid', gridTemplateColumns: '1fr 380px', gap: 32 }}>
             <div>
-              <h3 style={{ ...txt(20, 700), marginBottom: 20, ...flex('center'), gap: 8 }}>
-                <Clock size={22} /> Tiến trình ứng tuyển
-              </h3>
-              <div style={{ marginBottom: 32 }}>
-                {[
-                  {
-                    title: 'Nộp hồ sơ',
-                    date: '10/01/2025 14:30',
-                    description: 'Hồ sơ của bạn đã được gửi thành công'
-                  },
-                  {
-                    title: 'Đang xem xét',
-                    date: '11/01/2025 09:15',
-                    description: 'Nhà tuyển dụng đã xem hồ sơ của bạn'
-                  },
-                  {
-                    title: 'Hồ sơ của bạn đã được chấp nhận',
-                    date: '14/01/2025 12:15',
-                    description: 'Xin chúc mừng! Một công việc mới đang chào đón bạn ở phía trước'
-                  }
-                ].map((item, i, arr) => (
-                  <div key={i} style={{
-                    ...flex('flex-start'), gap: 16, position: 'relative'
-                  }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: '50%',
-                      background: C.green, ...flex('center'), justifyContent: 'center',
-                      flexShrink: 0, zIndex: 1
-                    }}>
-                      <CheckCircle size={20} color={C.white} />
-                    </div>
-                    <div style={{ 
-                      flex: 1, 
-                      paddingBottom: i < arr.length - 1 ? 32 : 0
-                    }}>
-                      <h4 style={{ ...txt(16, 600), marginBottom: 4 }}>{item.title}</h4>
-                      <p style={{ ...txt(14, 500, C.blue), marginBottom: 4 }}>{item.date}</p>
-                      <p style={{ ...txt(14, 400, C.gray) }}>{item.description}</p>
-                    </div>
-                    {i < arr.length - 1 && (
-                      <div style={{
-                        position: 'absolute',
-                        left: 19,
-                        top: 40,
-                        width: 2,
-                        height: 'calc(100% - 8px)',
-                        background: C.border
-                      }} />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <h3 style={{ ...txt(20, 700), marginBottom: 16, ...flex('center'), gap: 8 }}>
-                <MessageSquare size={22} /> Thư xin việc
-              </h3>
-              <div style={{
-                background: C.grayBg, borderRadius: 12, padding: 20, marginBottom: 32
-              }}>
-                <p style={{ ...txt(14, 400, C.gray), lineHeight: 1.7 }}>
-                  Em là sinh viên năm 3 ngành Toán - Tin học tại ĐH Khoa học Tự nhiên. Em có kinh nghiệm dạy kèm Toán và Lý cho học sinh THPT được 2 năm với kết quả tốt. Em rất mong được làm việc tại trung tâm để phát triển kỹ năng giảng dạy của mình.
-                </p>
-              </div>
-
               <h3 style={{ ...txt(20, 700), marginBottom: 16, ...flex('center'), gap: 8 }}>
                 <AlertCircle size={22} /> Phản hồi từ nhà tuyển dụng
               </h3>
@@ -183,51 +146,9 @@ const ApplicationModal = ({ open, onClose }) => {
                 border: `1px solid #fcd34d`
               }}>
                 <p style={{ ...txt(14, 400, '#92400e'), lineHeight: 1.7 }}>
-                  Cảm ơn bạn đã tham gia ứng tuyển—sau khi xem xét hồ sơ và trao đổi, chúng tôi rất vui mừng thông báo bạn đã được lựa chọn cho vị trí này; đội ngũ mong sớm chào đón bạn gia nhập và cùng nhau tạo nên những giá trị mới.
+                  {feedback || "Chưa có phản hồi từ nhà tuyển dụng"}
                 </p>
               </div>
-            </div>
-
-            <div>
-              <h3 style={{ ...txt(20, 700), marginBottom: 20, ...flex('center'), gap: 8 }}>
-                <Info size={22} /> Thông tin ứng tuyển
-              </h3>
-
-                {[
-                { label: 'NGÀY ỨNG TUYỂN', value: '16/01/2026 14:30' },
-                { label: 'SỐ LƯỢNG TUYỂN', value: '3 người' },
-                { label: 'HẠN NỘP HỒ SƠ', value: '30/01/2026', color: C.red },
-                { label: 'CẤP BẬC', value: 'Nhân viên' },
-                { label: 'HỌC VẤN', value: 'Cấp 3 trở lên' }
-                ].map(({ label, value, color }, i, arr) => {
-                const isLast = i === arr.length - 1;
-
-                return (
-                    <div
-                    key={i}
-                    style={{
-                        paddingBottom: isLast ? 0 : 16,
-                        marginBottom: isLast ? 0 : 16,
-                        borderBottom: isLast ? 'none' : `1px solid ${C.border}`
-                    }}
-                    >
-                    <p
-                        style={{
-                        ...txt(11, 700, C.grayLight),
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        marginBottom: 6
-                        }}
-                    >
-                        {label}
-                    </p>
-                    <p style={{ ...txt(14, 600, color || C.navy) }}>
-                        {value}
-                    </p>
-                    </div>
-                );
-                })}
-
               <div style={{ marginTop: 32 }}>
                 <h3 style={{ ...txt(18, 700), marginBottom: 16, ...flex('center'), gap: 8 }}>
                   <FileText size={20} /> Hồ sơ đã nộp
@@ -251,24 +172,95 @@ const ApplicationModal = ({ open, onClose }) => {
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
                       }}>
-                        CV_NguyenTuyetAnh.pdf
+                        {application?.cv_url ? application.cv_url?.split("/").pop() : "Không có CV"}
                       </p>
                       <p style={{ ...txt(12, 400, C.gray) }}>
-                        2.4 MB • 10/01/2025
+                        {application?.created_at ? formatDate(application.created_at) : "N/A"}
                       </p>
                     </div>
                   </div>
                 </div>
-                <button style={{
-                  width: '100%', marginTop: 16, padding: '12px',
-                  borderRadius: 10, border: 'none',
-                  background: C.blue, color: C.white,
-                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  ...flex('center'), justifyContent: 'center', gap: 8
+                <button 
+                onClick={async () => {
+                  try {
+                    const res = await fetch(application.cv_url);
+                    const blob = await res.blob();
+
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+
+                    a.href = url;
+                    a.download = application.cv_url.split("/").pop() || "cv.pdf";
+
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error(err);
+                    alert("Không tải được CV");
+                    }
+                  }}
+                  style={{
+                    width: '100%', marginTop: 16, padding: '12px',
+                    borderRadius: 10, border: 'none',
+                    background: C.blue, color: C.white,
+                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    ...flex('center'), justifyContent: 'center', gap: 8
                 }}>
                   <Download size={16} /> Tải xuống
                 </button>
               </div>
+            </div>
+            <div>
+              <h3 style={{ ...txt(20, 700), marginBottom: 20, ...flex('center'), gap: 8 }}>
+                <Info size={22} /> Thông tin ứng tuyển
+              </h3>
+                {[
+                  { 
+                    label: 'NGÀY ỨNG TUYỂN', 
+                    value: application?.created_at ? formatDate(application.created_at) : "N/A" 
+                  },
+                  { 
+                    label: 'SỐ LƯỢNG TUYỂN', 
+                    value: application?.num_slot ? `${application.num_slot} người` : "N/A" 
+                  },
+                  { 
+                    label: 'HẠN NỘP HỒ SƠ', 
+                    value: formatDate(application?.expiry_date) || "N/A", 
+                    color: C.red 
+                  },
+                  { label: 'CẤP BẬC', value: application?.role || "N/A" },
+                  { label: 'HỌC VẤN', value: application?.education_level || "N/A" }
+                ].map(({ label, value, color }, i, arr) => {
+                const isLast = i === arr.length - 1;
+
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      paddingBottom: isLast ? 0 : 16,
+                      marginBottom: isLast ? 0 : 16,
+                      borderBottom: isLast ? 'none' : `1px solid ${C.border}`
+                    }}
+                    >
+                    <p
+                      style={{
+                        ...txt(11, 700, C.grayLight),
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: 6
+                        }}
+                    >
+                      {label}
+                    </p>
+                    <p style={{ ...txt(14, 600, color || C.navy) }}>
+                      {value}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -324,10 +316,10 @@ const ApplicationCard = ({ application, onViewDetail }) => {
             }}
             >
             <div style={{ ...flex('center'), gap: 10, minWidth: 0 }}>
-                <h3 style={{ ...txt(18, 600), whiteSpace: 'nowrap' }}>
+              <h3 style={{ ...txt(18, 600), whiteSpace: 'nowrap' }}>
                 {application.title}
-                </h3>
-                <span
+              </h3>
+              <span
                 style={{ padding: '4px 12px',
                     borderRadius: 16,
                     background: config.bg,
@@ -336,9 +328,9 @@ const ApplicationCard = ({ application, onViewDetail }) => {
                     fontWeight: 600,
                     flexShrink: 0
                 }}
-                >
+              >
                 {application.status}
-                </span>
+              </span>
             </div>
 
             <span style={{ ...txt(13, 400, C.gray), whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -391,45 +383,66 @@ export default function AppliedJobsPage() {
   const [filter, setFilter] = useState('all');
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [applications, setApplications] = useState([]);
+  const fixCvUrl = (url) => {
+    if (!url) return "";
 
-  const applications = [
-    {
-      id: 1,
-      title: 'Nhân viên Phục vụ Part-time',
-      company: 'The Coffee House',
-      salary: '25.000 - 30.000 VNĐ/giờ',
-      status: 'Đang chờ',
-      appliedAgo: '3 ngày trước',
-      icon: Coffee
-    },
-    {
-      id: 2,
-      title: 'Gia sư Toán - Lý',
-      company: 'Trung tâm Gia sư Smart',
-      salary: '80.000 - 150.000 VNĐ/giờ',
-      status: 'Đã chấp nhận',
-      appliedAgo: '3 ngày trước',
-      icon: GraduationCap
-    },
-    {
-      id: 3,
-      title: 'Content Creator',
-      company: 'Startup Media Hub',
-      salary: '80.000 - 150.000 VNĐ/giờ',
-      status: 'Đã từ chối',
-      appliedAgo: '4 ngày trước',
-      icon: Monitor
-    },
-    {
-      id: 4,
-      title: 'Barista Part-time',
-      company: 'Highlands Coffee',
-      salary: '28.000 - 32.000 VNĐ/giờ',
-      status: 'Đã từ chối',
-      appliedAgo: '5 ngày trước',
-      icon: Coffee
-    }
-  ];
+    if (url.startsWith("http")) return url;
+
+    return "https://api.d4f.io.vn" +
+      url.replace("/src/store/cv", "/cv");
+  };
+
+  useEffect(() => {
+    const fetchApplications = async () => {
+      try {
+        const user = getCurrentUser();
+        if (!user?.candidate_id) return;
+        const res = await applicationService.getByCandidateId(user.candidate_id);
+        const mapped = await Promise.all(
+          res.map(async (app) => {
+            let job = {};
+            let employer = {};
+
+            try {
+              job = await jobService.getJobById(app.job_id);
+              if (job?.employer_id) employer = await getEmployerById(job.employer_id);
+              
+            } catch (e) {
+              console.error(e);
+            }
+
+            return {
+              id: app.application_id,
+              job_id: app.job_id,
+              employer_id: job?.employer_id,
+              location: job?.location,
+              title: job?.title || "N/A",
+              company: employer?.emp_name || "N/A",
+              salary: job
+                ? `${job.salary_min?.toLocaleString()} - ${job.salary_max?.toLocaleString()} VNĐ`
+                : "N/A",
+              status: app.status === "recruited" ? "Đã chấp nhận" : app.status === "rejected" ? "Đã từ chối" : "Đang chờ",
+              num_slot: job?.num_slot,
+              expiry_date: job?.expiry_date,
+              role: job?.role,
+              education_level: job?.education_level,
+              cv_url: fixCvUrl(app.cv_url),
+              created_at: app?.created_at,
+              appliedAgo: createdAt(app.created_at),
+              icon: Briefcase
+            };
+          })
+        );
+
+        setApplications(mapped);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchApplications();
+  }, []);
 
   const filteredApps = applications.filter(app => {
     if (filter === 'all') return true;

@@ -4,6 +4,7 @@ import {
   Calendar, Mail, Phone, MapPin, Heart, Briefcase, GraduationCap, Award, Camera
 } from 'lucide-react';
 import { COLORS } from '../constants/colors';
+import { BG } from '../constants/backgrounds';
 import { flex, txt } from '../utils/styles';
 import { useAuth } from "../context/AuthContext";
 import { getInitials } from '../utils/textUtils';
@@ -493,7 +494,7 @@ export default function ProfilePage() {
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 8,
                 border: `1px solid ${errors.gender ? C.red : C.border}`, fontSize: 14, outline: 'none', appearance: 'none',
-                background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
+                background: `${C.white} ${BG.dropdown}`
               }}
             >
               <option value="">Chọn giới tính</option>

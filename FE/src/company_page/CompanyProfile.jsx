@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Camera, Save, Edit2 } from 'lucide-react';
+import { Save, Edit2 } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
 import { getCurrentEmployer, updateEmployer } from "../services/authService";
@@ -255,16 +255,6 @@ export default function CompanyProfilePage() {
                   {getInitials(company.name || "Company")}
                 </span>
               </div>
-              {editMode && (
-                <button style={{
-                  position: 'absolute', bottom: -4, right: -4,
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: C.navy, border: `3px solid ${C.white}`,
-                  cursor: 'pointer', ...flex('center'), justifyContent: 'center'
-                }}>
-                  <Camera size={16} color={C.white} />
-                </button>
-              )}
             </div>
 
             <div style={{ flex: 1 }}>

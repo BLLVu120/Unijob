@@ -20,3 +20,14 @@ export const formatTime = (date) =>
     minute: "2-digit",
     timeZone: "Asia/Ho_Chi_Minh"
   });
+
+export const createdAt = (date) => {
+  const diff = Date.now() - new Date(date);
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+
+  if (hours < 1) return "Vừa đăng";
+  if (hours < 24) return `${hours} giờ trước`;
+
+  const days = Math.floor(hours / 24);
+  return `${days} ngày trước`;
+};

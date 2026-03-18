@@ -11,6 +11,7 @@ import { pageBtnStyle } from '../constants/pageBtnStyle';
 import { jobService } from "../services/jobService";
 import { formatDate } from '../utils/textUtils';
 import { jobFormFields, getJobFieldKey, jobExperienceLabel } from '../constants/jobFormFields';
+import { BG } from '../constants/backgrounds';
 import Toast from '../components/Toast';
 const C = COLORS;
 
@@ -495,7 +496,7 @@ const JobFormModal = ({ open, onClose, job, isEdit, onSuccess }) => {
                       style={{
                         width: '100%', padding: '10px 14px', borderRadius: 8,
                         border: `1px solid ${C.border}`, fontSize: 14, outline: 'none', appearance: 'none',
-                        background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
+                        background: `${C.white} ${BG.dropdown}`
                       }}>
                       {field.options.map(opt => (
                         <option key={opt.value || opt} value={opt.value || opt}>
@@ -813,7 +814,7 @@ export default function JobManagementPage() {
             fontSize: 14, outline: 'none', cursor: 'pointer',
             minWidth: 180,
             appearance: 'none',
-            background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
+            background: `${C.white} ${BG.dropdown}`
           }}>
             <option value="">Tất cả trạng thái</option>
             <option value="active">Đang hoạt động</option>

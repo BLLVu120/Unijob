@@ -1,18 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
+import { useParams } from "react-router-dom";
 import {
-  Heart, Send, Briefcase, MapPin, Clock,
+  Send, Briefcase, MapPin, Clock,
   Users, Gift, X, Upload, AlertTriangle,
   CheckCircle2, ExternalLink, Calendar
 } from 'lucide-react';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { flex, txt } from '../utils/styles';
 import { COLORS } from "../constants/colors";
+import { getInitials, formatDate } from "../utils/textUtils"
+import { jobService } from "../services/jobService";
+import { applicationService } from '../services/applicationService';
+import { getEmployerById, getCurrentUser } from "../services/authService";
+import Toast from '../components/Toast';
 
 const gap = (n) => ({ gap: `${n}px` });
 
 const Card = ({ children, style = {} }) => (
   <div style={{
+    width: '100%',
     background: COLORS.white, borderRadius: 12, border: `1px solid ${COLORS.border}`,
     padding: '28px 28px', ...style
   }}>
@@ -24,14 +29,6 @@ const SectionHead = ({ icon: Icon, title }) => (
   <h3 style={{ ...txt(20, 700), marginBottom: 14, ...flex('center'), ...gap(10) }}>
     <Icon size={22} color={COLORS.navy} /> {title}
   </h3>
-);
-
-const BulletList = ({ items }) => (
-  <ul style={{ margin: 0, paddingLeft: 22 }}>
-    {items.map((it, i) => (
-      <li key={i} style={{ ...txt(14, 400, COLORS.gray), marginBottom: 6 }}>{it}</li>
-    ))}
-  </ul>
 );
 
 const WarningBox = ({ children }) => (
@@ -71,39 +68,92 @@ const ModalShell = ({ open, onClose, children, maxW = 520 }) => {
   );
 };
 
-const ApplyModal = ({ open, onClose, onSubmitted }) => {
+const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
   const [file, setFile] = useState(null);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', letter: '' });
+  useEffect(() => {
+    if (!open) {
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }, [open]);
   const fileRef = useRef();
 
-  const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
+  const handleSubmit = async () => {
+    try {
+      if (!file) {
+        setToast({ type: "warning", message: "Vui lòng upload CV" });
+        return;
+      }
+
+      const user = getCurrentUser();
+
+      if (!user || user.role !== "candidate") {
+        setToast({ type: "error", message: "Bạn phải đăng nhập với tài khoản ứng viên" });
+        return;
+      }
+
+      const uploadRes = await applicationService.uploadCV(file);
+      const payload = {
+        application_id: crypto.randomUUID(),
+        job_id: job.job_id,
+        candidate_id: user.candidate_id,
+        cv_url: `https://api.d4f.io.vn${uploadRes.cv_url}`,
+        status: "submitted",
+      };
+
+      await applicationService.addApplication(payload);
+      setFile(null);
+      onClose();
+      setToast({
+        type: "success",
+        message: "Hồ sơ đã được gửi thành công!"
+      });
+
+    } catch (err) {
+      console.error(err);
+      setToast({ type: "error", message: err.message || "Ứng tuyển thất bại" });
+    }
+  };
 
   const handleDrop = (e) => {
     e.preventDefault();
     const f = e.dataTransfer?.files?.[0] || e.target.files?.[0];
-    if (f) setFile(f);
-  };
 
-  const inputStyle = {
-    width: '100%', padding: '11px 14px', borderRadius: 8,
-    border: `1px solid ${COLORS.border}`, fontSize: 14, color: COLORS.navy,
-    outline: 'none', boxSizing: 'border-box', background: COLORS.white
-  };
+    if (!f) return;
 
+    if (f.type !== "application/pdf") {
+      setToast({ type: "error", message: "Chỉ chấp nhận file PDF" });
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (f.size > maxSize) {
+      setToast({ type: "error", message: "File vượt quá 5MB" });
+      return;
+    }
+
+    setFile(f);
+  };
+  
   const labelStyle = { ...txt(14, 600), marginBottom: 6, display: 'block' };
 
   return (
     <ModalShell open={open} onClose={onClose}>
       <div style={{
-        background: 'linear-gradient(135deg,#f97316,#fb923c)',
+        background: 'linear-gradient(135deg, #f97316, #fb923c)',
         borderRadius: '16px 16px 0 0', padding: '24px 28px 20px',
         ...flex('center'), justifyContent: 'space-between'
       }}>
-        <span style={{ ...txt(22, 700, COLORS.white) }}>Nộp hồ sơ ứng tuyến</span>
-        <button onClick={onClose} style={{
-          width: 32, height: 32, borderRadius: '50%', border: 'none',
-          background: 'rgba(255,255,255,0.25)', cursor: 'pointer',
-          ...flex('center'), justifyContent: 'center'
+        <span style={{ ...txt(22, 700, COLORS.white) }}>Nộp hồ sơ ứng tuyển</span>
+        <button 
+          onClick={() => {
+            setFile(null);
+            onClose();
+          }}
+          style={{
+            width: 32, height: 32, borderRadius: '50%', border: 'none',
+            background: 'rgba(255,255,255,0.25)', cursor: 'pointer',
+            ...flex('center'), justifyContent: 'center'
         }}>
           <X size={18} color={COLORS.white} />
         </button>
@@ -114,8 +164,8 @@ const ApplyModal = ({ open, onClose, onSubmitted }) => {
           background: '#fff7ed', border: `1px solid #fed7aa`, borderRadius: 10,
           padding: '12px 16px', marginBottom: 22
         }}>
-          <p style={{ ...txt(15, 600, COLORS.navy) }}>Nhân viên phục vụ part-time</p>
-          <p style={{ ...txt(13, 400, COLORS.gray), marginTop: 2 }}>The Coffee House</p>
+          <p style={{ ...txt(15, 600, COLORS.navy) }}>{job?.title}</p>
+          <p style={{ ...txt(13, 400, COLORS.gray), marginTop: 2 }}>{employer?.emp_name}</p>
         </div>
 
         <label style={labelStyle}>Tải lên CV <span style={{ color: COLORS.red }}>*</span></label>
@@ -130,49 +180,32 @@ const ApplyModal = ({ open, onClose, onSubmitted }) => {
             marginBottom: 22, transition: 'all 0.2s'
           }}
         >
-          <input ref={fileRef} type="file" accept=".pdf,.jpg,.png" onChange={handleDrop} style={{ display: 'none' }} />
+          <input ref={fileRef} type="file" accept=".pdf" onChange={handleDrop} style={{ display: 'none' }} />
           <Upload size={32} color={file ? COLORS.green : COLORS.grayMid} style={{ marginBottom: 8 }} />
           <p style={{ ...txt(15, 600, file ? COLORS.green : COLORS.navy) }}>
             {file ? file.name : 'Click để tải file lên'}
           </p>
-          <p style={{ ...txt(12, 400, COLORS.grayMid), marginTop: 4 }}>File PDF, JPG hoặc PNG. Tối đa 5MB</p>
-        </div>
-
-        {[
-          { key: 'name',   label: 'Họ và tên',        ph: 'Nhập họ và tên' },
-          { key: 'phone',  label: 'Số điện thoại',     ph: 'Nhập số điện thoại' },
-          { key: 'email',  label: 'Địa chỉ email',     ph: 'Nhập địa chỉ email' }
-        ].map(({ key, label, ph }) => (
-          <div key={key} style={{ marginBottom: 18 }}>
-            <label style={labelStyle}>{label} <span style={{ color: COLORS.red }}>*</span></label>
-            <input value={form[key]} onChange={set(key)} placeholder={ph} style={inputStyle} />
-          </div>
-        ))}
-
-        <div style={{ marginBottom: 22 }}>
-          <label style={labelStyle}>Thư giới thiệu <span style={{ color: COLORS.red }}>*</span></label>
-          <textarea
-            value={form.letter} onChange={set('letter')}
-            placeholder="Nhập nội dung"
-            rows={5}
-            style={{ ...inputStyle, resize: 'vertical', minHeight: 100 }}
-          />
+          {!file && (
+            <p style={{ ...txt(12, 400, COLORS.grayMid), marginTop: 4 }}>
+              File .PDF tối đa 5MB
+            </p>
+          )}
         </div>
 
         <WarningBox>
-          <strong>Lưu ý:</strong> Thông tin của bạn sẽ được gửi trực tiếp đến nhà tuyển dụng. Hãy đảm bảo thông tin chính xác và CV phù hợp với vị trí ứng tuyến.
+          <strong>Lưu ý:</strong> Thông tin của bạn sẽ được gửi trực tiếp đến nhà tuyển dụng. Hãy đảm bảo thông tin chính xác và CV phù hợp với vị trí ứng tuyển.
         </WarningBox>
 
         <button
-          onClick={() => { onClose(); onSubmitted(); }}
+          onClick={handleSubmit}
           style={{
             marginTop: 22, width: '100%', padding: '14px', borderRadius: 10, border: 'none',
-            background: 'linear-gradient(135deg,#f97316,#fb923c)',
+            background: 'linear-gradient(135deg, #f97316, #fb923c)',
             color: COLORS.white, fontSize: 16, fontWeight: 600, cursor: 'pointer',
             ...flex('center'), justifyContent: 'center', ...gap(8)
           }}
         >
-          <Send size={18} /> Gửi hồ sơ ứng tuyến
+          <Send size={18} /> Gửi hồ sơ ứng tuyển
         </button>
       </div>
     </ModalShell>
@@ -229,18 +262,6 @@ const ReportModal = ({ open, onClose }) => {
           <span style={{ ...txt(14, 400, COLORS.gray) }}>Nhân viên Phục vụ Part-time</span>
         </div>
 
-        {[
-          { key: 'name',    label: 'Họ và tên',       ph: 'Nhập họ và tên' },
-          { key: 'phone',   label: 'Số điện thoại',    ph: 'Nhập số điện thoại' },
-          { key: 'address', label: 'Địa chỉ',          ph: 'Nhập địa chỉ' },
-          { key: 'email',   label: 'Địa chỉ email',    ph: 'Nhập địa chỉ email' }
-        ].map(({ key, label, ph }) => (
-          <div key={key} style={{ ...flex('center'), ...gap(12), marginBottom: 16 }}>
-            <label style={{ ...txt(14, 600), minWidth: 110 }}>{label} <span style={{ color: COLORS.red }}>*</span></label>
-            <input value={form[key]} onChange={set(key)} placeholder={ph} style={{ ...inputStyle, flex: 1 }} />
-          </div>
-        ))}
-
         <div style={{ ...flex('flex-start'), ...gap(12), marginBottom: 22 }}>
           <label style={{ ...txt(14, 600), minWidth: 110, paddingTop: 2 }}>Nội dung <span style={{ color: COLORS.red }}>*</span></label>
           <textarea
@@ -271,103 +292,97 @@ const ReportModal = ({ open, onClose }) => {
 };
 
 export default function JobDetailPage() {
+  const currentUser = getCurrentUser();
+  const isCandidate = currentUser?.role === "candidate";
+  const { id } = useParams();
+  const [job, setJob] = useState(null);
+  const [employer, setEmployer] = useState(null);
   const [applyOpen, setApplyOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [appliedSuccess, setAppliedSuccess] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  const descBullets = [
-    'Phục vụ khách hàng, nhận order và giao đồ uống',
-    'Pha chế các loại đồ uống theo quy trình chuẩn',
-    'Giữ gìn vệ sinh khu vực làm việc',
-    'Hỗ trợ thu ngân khi cần thiết',
-    'Tư vấn menu cho khách hàng'
-  ];
-  const requireBullets = [
-    'Độ tuổi: 18–28 tuổi',
-    'Ngoại hình ưa nhìn, giao tiếp tốt',
-    'Nhiệt tình, trách nhiệm với công việc',
-    'Chịu được áp lực cao trong giờ cao điểm',
-    'Ưu tiên có kinh nghiệm làm F&B'
-  ];
-  const scheduleBullets = [
-    'Ca sáng: 07:00 – 11:00',
-    'Ca trưa: 11:00 – 15:00',
-    'Ca chiều: 15:00 – 19:00',
-    'Ca tối: 19:00 – 23:00'
-  ];
-  const benefitBullets = [
-    'Lương trả theo tuần qua chuyển khoản',
-    'Tăng lương sau 3 tháng làm việc',
-    'Thưởng thêm 50.000đ/ca cho ngày lễ/Tết',
-    'Hỗ trợ xe/xáng 15.000đ/ngày'
-  ];
+  useEffect(() => {
+    const fetchJob = async () => {
+      try {
+        const jobData = await jobService.getJobById(id);
+        setJob(jobData);
+
+        if (jobData?.employer_id) {
+          const emp = await getEmployerById(jobData.employer_id);
+          setEmployer(emp);
+        }
+      } catch (err) {
+        console.error("Lỗi lấy job:", err);
+      }
+    };
+
+    fetchJob();
+  }, [id]);
+
+  if (!job) return;
 
   return (
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       background: '#f1f5f9', minHeight: '100vh', paddingBottom: 28
     }}>
-      {appliedSuccess && (
-        <div style={{
-          position: 'fixed', top: 24, right: 24, zIndex: 1000,
-          background: COLORS.greenBg, border: `1px solid ${COLORS.greenBorder}`,
-          borderRadius: 12, padding: '16px 24px',
-          ...flex('center'), ...gap(10),
-          boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-          animation: 'slideIn 0.3s ease'
-        }}>
-          <CheckCircle2 size={22} color={COLORS.green} />
-          <span style={{ ...txt(15, 600, '#166534') }}>Hồ sơ đã được gửi thành công!</span>
-          <button onClick={() => setAppliedSuccess(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginRight: -8 }}>
-            <X size={16} color={COLORS.gray} />
-          </button>
-        </div>
-      )}
-
+    {toast && (
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(null)}
+      />
+    )}
     <div style={{ display: 'flex', justifyContent: 'center' }}>
-      <div style={{ maxWidth: 1200, padding: '0 24px', display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', marginTop: 28, flexDirection: 'column', gap: 20 }}>
+      <div style={{ width: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+        <div style={{ width: 700, display: 'flex', marginTop: 28, flexDirection: 'column', gap: 20 }}>
           <Card>
             <div style={{ ...flex('center'), justifyContent: 'space-between', marginBottom: 10 }}>
               <div>
-                <h1 style={{ ...txt(26, 700), marginBottom: 4 }}>Nhân viên phục vụ part-time</h1>
+                <h1 style={{ ...txt(26, 700), marginBottom: 4 }}>{job.title}</h1>
                 <div style={{ ...flex('center'), ...gap(5) }}>
-                  <span style={{ ...txt(14, 500, COLORS.gray) }}>The Coffee House</span>
-                  <FontAwesomeIcon icon={faCheckCircle} size="sm" color={COLORS.blue} />
+                  <span style={{ ...txt(14, 500, COLORS.gray) }}>{employer?.emp_name}</span>
                 </div>
               </div>
               <div style={{ ...flex('center'), ...gap(10), marginLeft: 29 }}>
                 <button
-                  onClick={() => setSaved(!saved)}
-                  style={{
-                    padding: '8px 18px', borderRadius: 20,
-                    border: `1.5px solid ${saved ? COLORS.pink : COLORS.border}`,
-                    background: saved ? '#fdf2f8' : COLORS.white,
-                    color: saved ? COLORS.pink : COLORS.navy, fontSize: 14, fontWeight: 600,
-                    cursor: 'pointer', ...flex('center'), ...gap(6)
+                  onClick={() => {
+                    if (!isCandidate) return;
+                    setApplyOpen(true);
                   }}
-                >
-                  <Heart size={16} fill={saved ? COLORS.pink : 'none'} color={saved ? COLORS.pink : COLORS.navy} /> Lưu tin
-                </button>
-                <button
-                  onClick={() => setApplyOpen(true)}
+                  disabled={!isCandidate}
                   style={{
                     padding: '8px 18px', borderRadius: 20, border: 'none',
-                    background: COLORS.navy, color: COLORS.white, fontSize: 14, fontWeight: 600,
-                    cursor: 'pointer', ...flex('center'), ...gap(6)
+                    background: isCandidate ? COLORS.navy : COLORS.grayLight,
+                    cursor: isCandidate ? 'pointer' : 'not-allowed', 
+                    color: COLORS.white, fontSize: 14, fontWeight: 600,
+                    opacity: isCandidate ? 1 : 0.6,
+                    ...flex('center'), ...gap(6)
                   }}
                 >
-                  <Send size={16} /> Ứng tuyến
+                  <Send size={16} /> Ứng tuyển
                 </button>
               </div>
             </div>
 
             <div style={{ ...flex('center'), ...gap(40), marginTop: 18, paddingTop: 18, borderTop: `1px solid ${COLORS.border}` }}>
               {[
-                { icon: Briefcase,  label: 'MỨC LƯƠNG',   value: '25.000 – 30.000 VNĐ/giờ', valueColor: COLORS.blueText },
-                { icon: MapPin,     label: 'ĐỊA ĐIỂM',    value: 'Quận 1, TP.HCM' },
-                { icon: Clock,      label: 'KINH NGHIỆM',  value: 'Không yêu cầu' }
+                { 
+                  icon: Briefcase,  
+                  label: 'MỨC LƯƠNG',  
+                  value: `${job.salary_min?.toLocaleString()} – ${job.salary_max?.toLocaleString()} VNĐ`,
+                  valueColor: COLORS.blueText 
+                },
+                { 
+                  icon: MapPin,     
+                  label: 'ĐỊA ĐIỂM',
+                  value: `${job.location}`,
+                },
+                { 
+                  icon: Clock,      
+                  label: 'KINH NGHIỆM',  
+                  value: `${job.experience === 0 ? "Không yêu cầu" : `${job.experience} năm`}`
+                }
               ].map(({ icon: Icon, label, value, valueColor }) => (
                 <div key={label} style={{ ...flex('center'), ...gap(8) }}>
                   <Icon size={18} color={COLORS.grayMid} />
@@ -383,64 +398,78 @@ export default function JobDetailPage() {
           <Card>
             <SectionHead icon={Briefcase} title="Mô tả công việc" />
             <p style={{ ...txt(14, 400, COLORS.gray), marginBottom: 14 }}>
-              Chúng tôi đang tìm kiếm nhân viên phục vụ part-time năng động, nhiệt tình để gia nhập đội ngũ tại cửa hàng The Coffee House chi nhánh Quận 1.
+              {job.description}
             </p>
-            <BulletList items={descBullets} />
           </Card>
 
           <Card>
             <SectionHead icon={Users} title="Yêu cầu ứng viên" />
-            <BulletList items={requireBullets} />
+            <p style={{ ...txt(14, 400, COLORS.gray), marginBottom: 14 }}>
+              {job.requirements}
+            </p>
           </Card>
 
           <Card>
             <SectionHead icon={Calendar} title="Thời gian làm việc" />
-            <BulletList items={scheduleBullets} />
+            <p style={{ ...txt(14, 400, COLORS.gray), marginBottom: 14 }}>
+              {job.working_shifts}
+            </p>
           </Card>
 
           <Card>
             <SectionHead icon={Gift} title="Quyền lợi" />
-            <BulletList items={benefitBullets} />
+            <p style={{ ...txt(14, 400, COLORS.gray), marginBottom: 14 }}>
+              {job.benefits}
+            </p>
           </Card>
         </div>
 
-        <div style={{ ...flex('stretch', 'column'), ...gap(20), marginTop: 28 }}>
+        <div style={{  width: 360, display: 'flex', flexDirection: 'column', gap: 20, marginTop: 28 }}>
           <Card>
             <div style={{ ...flex('center'), ...gap(16), marginBottom: 20 }}>
               <div style={{
                 width: 72, height: 72, borderRadius: 14,
-                background: 'linear-gradient(135deg,#f97316,#fb923c)',
+                background: 'linear-gradient(135deg, #f97316, #fb923c)',
                 ...flex('center'), justifyContent: 'center'
               }}>
-                <span style={{ ...txt(13, 800, COLORS.white), textAlign: 'center', lineHeight: 1.2 }}>THE<br/>COFFEE<br/>HOUSE</span>
+                <span style={{ ...txt(30, 800, COLORS.white), textAlign: 'center', lineHeight: 1.2 }}>
+                  {getInitials(employer?.emp_name)}
+                </span>
               </div>
-              <span style={{ ...txt(18, 700) }}>THE COFFEE HOUSE</span>
+              <span style={{ ...txt(18, 700) }}>{employer?.emp_name}</span>
             </div>
 
             {[
-              { icon: Users,      label: 'Quy mô:',   value: '1000+ nhân viên' },
-              { icon: Briefcase,  label: 'Lĩnh vực:', value: 'F&B' },
-              { icon: MapPin,     label: 'Địa chỉ:',  value: '141 Nguyễn Thái Bình, Quận 1, TP. Hồ Chí Minh' }
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} style={{ ...flex('flex-start'), ...gap(10), marginBottom: 12 }}>
+              { icon: Users, label: 'Quy mô:', value: employer?.scope },
+              { icon: Briefcase, label: 'Lĩnh vực:', value: employer?.field },
+              { icon: MapPin, label: 'Địa chỉ:', value: employer?.address }
+            ].map(({ icon: Icon, label, value }, index) => (
+              <div key={index} style={{ ...flex('flex-start'), ...gap(10), marginBottom: 12 }}>
                 <Icon size={17} color={COLORS.grayMid} style={{ marginTop: 2, flexShrink: 0 }} />
                 <div>
                   <span style={{ ...txt(13, 600, COLORS.gray) }}>{label} </span>
-                  <span style={{ ...txt(13, 500, COLORS.navy) }}>{value}</span>
+                  <span style={{ ...txt(13, 500, COLORS.navy) }}>{value || "Chưa cập nhật"}</span>
                 </div>
               </div>
             ))}
 
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-                <a href="#" style={{
+              {employer?.website && (
+                <a
+                  href={employer.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
                     ...txt(14, 600, COLORS.blueText),
                     textDecoration: 'none'
-                }}>
-                    Xem trang công ty <ExternalLink size={15} />
+                  }}
+                >
+                  Xem trang công ty <ExternalLink size={15} />
                 </a>
+              )}
             </div>
           </Card>
 
@@ -456,70 +485,72 @@ export default function JobDetailPage() {
             </h3>
             
             {[
-            { label: 'SỐ LƯỢNG TUYỂN', value: '3 người', color: COLORS.green },
-            { label: 'HẠN NỘP HỒ SƠ', value: '30/01/2025', color: COLORS.red },
-            { label: 'CẤP BẬC',        value: 'Nhân viên' },
-            { label: 'HỌC VẤN',        value: 'Cấp 3 trở lên' }
+              { label: 'SỐ LƯỢNG TUYỂN', value: `${job.num_slot} người`, color: COLORS.green },
+              { label: 'HẠN NỘP HỒ SƠ', value: formatDate(job.expiry_date), color: COLORS.red },
+              { label: 'CẤP BẬC', value: job.role },
+              { label: 'HỌC VẤN', value: job.education_level }
             ].map(({ label, value, color }, i, arr) => {
-            const isLast = i === arr.length - 1;
-
-            return (
-                <div
-                key={label}
-                style={{
-                    paddingBottom: isLast ? 0 : 14,
-                    marginBottom: isLast ? 0 : 14,
-                    borderBottom: isLast ? 'none' : `1px solid ${COLORS.border}`
-                }}
-                >
-                <p style={{ ...txt(11, 700, COLORS.grayMid), marginBottom: 4 }}>
-                    {label}
-                </p>
-                <p style={{ ...txt(14, 600, color || COLORS.navy) }}>{value}</p>
-                </div>
-            );
+              const isLast = i === arr.length - 1;
+              return (
+                  <div
+                  key={label}
+                  style={{
+                      paddingBottom: isLast ? 0 : 14,
+                      marginBottom: isLast ? 0 : 14,
+                      borderBottom: isLast ? 'none' : `1px solid ${COLORS.border}`
+                  }}
+                  >
+                  <p style={{ ...txt(11, 700, COLORS.grayMid), marginBottom: 4 }}>
+                      {label}
+                  </p>
+                  <p style={{ ...txt(14, 600, color || COLORS.navy) }}>{value}</p>
+                  </div>
+              );
             })}
           </Card>
 
-          <div style={{
-            background: COLORS.yellow, border: `1px solid ${COLORS.yellowBorder}`,
-            borderRadius: 12, padding: 22
-          }}>
-            <h4 style={{ ...txt(16, 700, '#92400e'), marginBottom: 12, ...flex('center'), ...gap(8) }}>
-              <AlertTriangle size={18} color="#92400e" /> Lưu ý khi ứng tuyến
-            </h4>
-            <ul style={{ margin: 0, paddingLeft: 18, marginBottom: 16 }}>
-              {[
-                'Không chuyển tiền đặt cọc cho bất kỳ lý do gì',
-                'Không cung cấp thông tin các nhân nhạy cảm qua email/điện thoại',
-                'Xác minh thông tin công ty trước khi ứng tuyến'
-              ].map((it, i) => (
-                <li key={i} style={{ ...txt(13, 400, '#92400e'), marginBottom: 5 }}>{it}</li>
-              ))}
-            </ul>
-            <p style={{ ...txt(13, 400, '#92400e'), marginBottom: 16 }}>
-              Nếu bạn thấy rằng tin tuyển dụng này không đúng, hãy phản ánh với chúng tôi.
-            </p>
-            <button
-              onClick={() => setReportOpen(true)}
-              style={{
-                width: '100%', padding: '11px', borderRadius: 8, border: 'none',
-                background: COLORS.red, color: COLORS.white, fontSize: 14, fontWeight: 600,
-                cursor: 'pointer', ...flex('center'), justifyContent: 'center', ...gap(6)
-              }}
-            >
-              <AlertTriangle size={16} /> Báo cáo tin tuyển dụng
-            </button>
-          </div>
+          {isCandidate && (
+            <div style={{
+              background: COLORS.yellow, border: `1px solid ${COLORS.yellowBorder}`,
+              borderRadius: 12, padding: 22
+            }}>
+              <h4 style={{ ...txt(16, 700, '#92400e'), marginBottom: 12, ...flex('center'), ...gap(8) }}>
+                <AlertTriangle size={18} color="#92400e" /> Lưu ý khi ứng tuyển
+              </h4>
+              <ul style={{ margin: 0, paddingLeft: 18, marginBottom: 16 }}>
+                {[
+                  'Không chuyển tiền đặt cọc cho bất kỳ lý do gì',
+                  'Không cung cấp thông tin các nhân nhạy cảm qua email/điện thoại',
+                  'Xác minh thông tin công ty trước khi ứng tuyển'
+                ].map((it, i) => (
+                  <li key={i} style={{ ...txt(13, 400, '#92400e'), marginBottom: 5 }}>{it}</li>
+                ))}
+              </ul>
+              <p style={{ ...txt(13, 400, '#92400e'), marginBottom: 16 }}>
+                Nếu bạn thấy rằng tin tuyển dụng này không đúng, hãy phản ánh với chúng tôi.
+              </p>
+              <button
+                onClick={() => setReportOpen(true)}
+                style={{
+                  width: '100%', padding: '11px', borderRadius: 8, border: 'none',
+                  background: COLORS.red, color: COLORS.white, fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', ...flex('center'), justifyContent: 'center', ...gap(6)
+                }}
+              >
+                <AlertTriangle size={16} /> Báo cáo tin tuyển dụng
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
 
-      {/* ════ MODALS ════ */}
       <ApplyModal
         open={applyOpen}
         onClose={() => setApplyOpen(false)}
-        onSubmitted={() => setAppliedSuccess(true)}
+        setToast={setToast}
+        job={job}
+        employer={employer}
       />
       <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
 

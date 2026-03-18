@@ -30,4 +30,9 @@ export const jobService = {
     const res = await apiRequest(`/v1/job/get_by_id?id=${jobId}`);
     return res.job;
   },
+
+  getAllJobs: async () => {
+    const res = await apiRequest("/v1/admin/get_all_jobs");
+    return res.jobs || [];
+  }
 };

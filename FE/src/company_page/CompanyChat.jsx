@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from "react-router-dom";
 import { Search, SendHorizontal } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
@@ -131,6 +132,7 @@ const MessageBubble = ({ message, isOwn }) => (
 
 
 export default function EmployerMessagesPage() {
+  const { candidateId } = useParams();
   const [activeConversation, setActiveConversation] = useState(null);
   const [messageText, setMessageText] = useState("");
   const [conversations, setConversations] = useState([]);
@@ -175,8 +177,18 @@ export default function EmployerMessagesPage() {
 
         const conversationsList = Object.values(unique);
         setConversations(conversationsList);
-        if (conversationsList.length > 0) setActiveConversation(conversationsList[0]);
+        if (conversationsList.length > 0) {
+          if (candidateId) {
+            const found = conversationsList.find(
+              c => String(c.candidateId) === String(candidateId)
+            );
 
+            if (found) setActiveConversation(found);
+            else setActiveConversation(conversationsList[0]);
+          } else {
+            setActiveConversation(conversationsList[0]);
+          }
+        }
       } catch (err) {
         console.error(err);
       }
@@ -184,6 +196,18 @@ export default function EmployerMessagesPage() {
 
     fetchConversations();
   }, []);
+
+  useEffect(() => {
+    if (!candidateId || conversations.length === 0) return;
+
+    const found = conversations.find(
+      c => String(c.candidateId) === String(candidateId)
+    );
+
+    if (found) {
+      setActiveConversation(found);
+    }
+  }, [candidateId, conversations]);
 
   useEffect(() => {
     if (!activeConversation?.candidateId) return;

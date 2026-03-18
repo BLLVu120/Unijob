@@ -25,7 +25,6 @@ const Sidebar = ({ isEmployer }) => {
 
   const userNav = [
     { icon: User, label: 'Hồ sơ cá nhân', path: '/candidate/profile' },
-    { icon: Bookmark, label: 'Việc đã lưu', path: '/candidate/saved-jobs' },
     { icon: Send, label: 'Việc đã ứng tuyển', path: '/candidate/applied-jobs' },
     { icon: MessageSquare, label: 'Tin nhắn', path: '/candidate/messages' },
     { icon: Lock, label: 'Đổi mật khẩu', path: '/candidate/change-password' }

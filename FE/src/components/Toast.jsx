@@ -26,7 +26,7 @@ const Toast = ({ message, type = 'error', onClose }) => {
         position: 'fixed',
         top: '24px',
         right: '24px',
-        zIndex: 9999,
+        zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
         gap: '12px',

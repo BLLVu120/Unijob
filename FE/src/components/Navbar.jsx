@@ -212,9 +212,13 @@ const Navbar = () => {
         </Link>
 
         <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
-          {['Tìm việc', 'Nhà tuyển dụng'].map((item, idx) => (
+          {[
+            { label: "Tìm việc", path: "/jobs" },
+            { label: "Nhà tuyển dụng", path: "/company" }
+          ].map((item, idx) => (
             <span
               key={idx}
+              onClick={() => navigate(item.path)}
               style={{
                 color: COLORS.white,
                 fontSize: '14px',
@@ -226,7 +230,7 @@ const Navbar = () => {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.9')}
             >
-              {item}
+              {item.label}
             </span>
           ))}
         </div>

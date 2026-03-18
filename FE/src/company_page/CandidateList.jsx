@@ -1,14 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import { FileText, Users, MessageSquare, Award, Search, Eye,
   User, Calendar, Phone, Mail, Home, Briefcase, X,
   CheckCircle, XCircle, Clock, Download, MessageCircle
 } from 'lucide-react';
 import { flex, txt } from '../utils/styles';
 import { COLORS } from '../constants/colors';
+import { BG } from '../constants/backgrounds';
 import { pageBtnStyle } from "../constants/pageBtnStyle";
+import { formatDate, getInitials } from "../utils/textUtils";
+import { jobService } from '../services/jobService';
+import { feedbackService } from "../services/feedbackService";
+import { applicationService } from "../services/applicationService";
+import { getUserById, getCurrentEmployer } from "../services/authService";
 const C = COLORS;
 
-const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
+const CandidateModal = ({ open, onClose, candidate, onApprove, onReject, statusLabel }) => {
   const statusConfig = {
     pending: {
       badge: { bg: C.yellowBg, text: '#f59e0b', label: 'Chờ duyệt', icon: Clock },
@@ -34,13 +41,13 @@ const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
       feedbackEditable: true,
       feedbackContent: 'Cảm ơn bạn đã tham gia ứng tuyển—sau khi xem xét hồ sơ và trao đổi, chúng tôi rất tiếc thông báo rằng hồ sơ của bạn chưa phù hợp với yêu cầu tuyển dụng hiện tại.',
       buttons: [
-        { label: 'Từ chối', color: C.red, action: 'reject', icon: XCircle, disabled: true },
+        { label: 'Từ chối', color: C.red, action: 'reject', icon: XCircle },
         { label: 'Duyệt hồ sơ', color: C.green, action: 'approve', icon: CheckCircle }
       ]
     }
   };
   
-  const config = statusConfig[candidate?.status] || statusConfig.pending;
+  const config = statusConfig[candidate?.uiStatus] || statusConfig.pending;
   const [feedback, setFeedback] = useState(config.feedbackContent || '');
 
   if (!open || !candidate) return null;
@@ -84,7 +91,7 @@ const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
                     ...flex('center'), gap: 6
                     }}>
                     {BadgeIcon && <BadgeIcon size={14} />}
-                    {config.badge.label}
+                    {statusLabel[candidate.status] || config.badge.label}
                     </span>
                 </div>
 
@@ -104,14 +111,14 @@ const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
                 background: C.purple,
                 ...flex('center'), justifyContent: 'center'
               }}>
-                <span style={{ ...txt(24, 700, C.white) }}>TA</span>
+                <span style={{ ...txt(24, 700, C.white) }}>{getInitials(candidate.name)}</span>
               </div>
               <div>
                 <h2 style={{ ...txt(28, 700, C.white), marginBottom: 4 }}>
                   {candidate.name}
                 </h2>
                 <p style={{ ...txt(16, 500, C.white), opacity: 0.95 }}>
-                  Ứng tuyển vị trí: {candidate.position}
+                  Ứng tuyển: {candidate.position}
                 </p>
               </div>
             </div>
@@ -127,12 +134,12 @@ const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
                 display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16
               }}>
                 {[
-                  { icon: User, label: 'HỌ VÀ TÊN', value: 'Nguyễn Văn Anh', iconColor: C.blue },
-                  { icon: Users, label: 'GIỚI TÍNH', value: 'Nữ', iconColor: C.pink },
-                  { icon: Calendar, label: 'NGÀY SINH', value: '15/03/2002', iconColor: C.purple },
-                  { icon: Phone, label: 'SỐ ĐIỆN THOẠI', value: '0912 345 678', iconColor: C.cyan },
-                  { icon: Mail, label: 'EMAIL', value: 'vananh@email.com', iconColor: C.green },
-                  { icon: Home, label: 'ĐỊA CHỈ', value: '123 Đường ABC, Phường 5, Quận 1, TP. Hồ Chí Minh', iconColor: C.orange }
+                  { icon: User, label: 'HỌ VÀ TÊN', value: candidate.name, iconColor: C.blue },
+                  { icon: Users, label: 'GIỚI TÍNH', value: candidate.gender, iconColor: C.pink },
+                  { icon: Calendar, label: 'NGÀY SINH', value: formatDate(candidate.dob), iconColor: C.purple },
+                  { icon: Phone, label: 'SỐ ĐIỆN THOẠI', value: candidate.phone, iconColor: C.cyan },
+                  { icon: Mail, label: 'EMAIL', value: candidate.email, iconColor: C.green },
+                  { icon: Home, label: 'ĐỊA CHỈ', value: candidate.address, iconColor: C.orange }
                 ].map(({ icon: Icon, label, value, iconColor }, i) => (
                   <div key={i}>
                     <div style={{ ...flex('center'), gap: 8, marginBottom: 6 }}>
@@ -247,16 +254,38 @@ const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
                     <span style={{ ...txt(12, 700, C.white) }}>PDF</span>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <p style={{ ...txt(14, 600) }}>CV_NguyenTuyetAnh.pdf</p>
-                    <p style={{ ...txt(12, 400, C.gray) }}>2.4 MB • 10/01/2025</p>
+                    <p style={{ ...txt(14, 600) }}>{candidate.cv ? candidate.cv.split('/').pop() : "Không có CV"}</p>
+                    <p style={{ ...txt(12, 400, C.gray) }}>{candidate.appliedDate || "N/A"}</p>
                   </div>
                 </div>
               </div>
-              <button style={{
-                width: '100%', padding: '12px', borderRadius: 10,
-                border: 'none', background: C.green,
-                color: C.white, fontSize: 14, fontWeight: 600,
-                cursor: 'pointer', ...flex('center'), justifyContent: 'center', gap: 8
+              <button 
+                onClick={async () => {
+                  try {
+                    const res = await fetch(candidate.cv);
+                    const blob = await res.blob();
+
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+
+                    a.href = url;
+                    a.download = candidate.cv.split("/").pop() || "cv.pdf";
+
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error(err);
+                    alert("Không tải được CV");
+                  }
+                }}
+                style={{
+                  width: '100%', padding: '12px', borderRadius: 10,
+                  border: 'none', background: C.green,
+                  color: C.white, fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', ...flex('center'), justifyContent: 'center', gap: 8
               }}>
                 <Download size={16} /> Tải xuống
               </button>
@@ -264,32 +293,18 @@ const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
               <h3 style={{ ...txt(18, 700), marginTop: 32, marginBottom: 16, ...flex('center'), gap: 8 }}>
                 <MessageCircle size={20} /> Phản hồi
               </h3>
-              {config.showFeedback ? (
-                <textarea
-                  value={feedback}
-                  onChange={e => setFeedback(e.target.value)}
-                  placeholder={config.feedbackPlaceholder || 'Nhập nội dung phản hồi'}
-                  style={{
-                    width: '100%', minHeight: 120, padding: '12px',
-                    borderRadius: 12, border: `1px solid ${C.border}`,
-                    fontSize: 14, fontFamily: 'inherit',
-                    resize: 'vertical', outline: 'none',
-                    background: C.white
-                  }}
-                />
-              ) : (
-                <textarea
-                  value={feedback}
-                  onChange={e => setFeedback(e.target.value)}
-                  placeholder={config.feedbackPlaceholder}
-                  style={{
-                    width: '100%', minHeight: 120, padding: '12px',
-                    borderRadius: 12, border: `1px solid ${C.border}`,
-                    fontSize: 14, fontFamily: 'inherit',
-                    resize: 'vertical', outline: 'none'
-                  }}
-                />
-              )}
+              <textarea
+                value={feedback}
+                onChange={e => setFeedback(e.target.value)}
+                placeholder="Nhập nội dung phản hồi"
+                style={{
+                  width: '100%', minHeight: 120, padding: '12px',
+                  borderRadius: 12, border: `1px solid ${C.border}`,
+                  fontSize: 14, fontFamily: 'inherit',
+                  resize: 'vertical', outline: 'none',
+                  background: C.white
+                }}
+              />
             </div>
           </div>
 
@@ -299,18 +314,24 @@ const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
           }}>
             {config.buttons.map((btn, i) => {
               const BtnIcon = btn.icon;
+              const statusMap = {
+                approve: "approved",
+                reject: "rejected"
+              };
+              const isDisabled = statusMap[btn.action] === candidate.uiStatus;
+
               return (
                 <button
                   key={i}
-                  onClick={() => btn.action === 'approve' ? onApprove() : onReject()}
-                  disabled={btn.disabled}
+                  onClick={() => btn.action === 'approve' ? onApprove(feedback) : onReject(feedback)}
+                  disabled={isDisabled}
                   style={{
                     padding: '12px 28px', borderRadius: 10, border: 'none',
-                    background: btn.disabled ? C.grayBg : btn.color,
-                    color: btn.disabled ? C.gray : C.white,
+                    background: isDisabled ? C.grayBg : btn.color,
+                    color: isDisabled ? C.gray : C.white,
                     fontSize: 15, fontWeight: 600,
-                    cursor: btn.disabled ? 'not-allowed' : 'pointer',
-                    opacity: btn.disabled ? 0.5 : 1,
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                    opacity: isDisabled ? 0.5 : 1,
                     ...flex('center'), gap: 8
                   }}
                 >
@@ -326,63 +347,93 @@ const CandidateModal = ({ open, onClose, candidate, onApprove, onReject }) => {
 };
 
 export default function CandidatesPage() {
-    const candidates = [
-    {
-      id: 1,
-      name: 'Nguyễn Thị Tuyết Anh',
-      email: 'tuyetanh@email.com',
-      position: 'Nhân viên Phục vụ',
-      appliedDate: '15/01/2025',
-      status: 'approved',
-      avatar: 'CH',
-      bgColor: C.purple
-    },
-    {
-      id: 2,
-      name: 'Trần Cẩm Ly',
-      email: 'camly@email.com',
-      position: 'Thu ngân Part-time',
-      appliedDate: '15/01/2025',
-      status: 'pending',
-      avatar: 'SA',
-      bgColor: C.purple
-    },
-    {
-      id: 3,
-      name: 'Lê Văn Lập',
-      email: 'vanlap@email.com',
-      position: 'Pha chế',
-      appliedDate: '15/01/2025',
-      status: 'approved',
-      avatar: 'TE',
-      bgColor: C.purple
-    },
-    {
-      id: 4,
-      name: 'Phạm Minh Châu',
-      email: 'minhchau@email.com',
-      position: 'Thu ngân Part-time',
-      appliedDate: '15/01/2025',
-      status: 'approved',
-      avatar: 'AX',
-      bgColor: C.purple
-    },
-    {
-      id: 5,
-      name: 'Võ Hoàng Long',
-      email: 'hoanglong@email.com',
-      position: 'Thu ngân Part-time',
-      appliedDate: '15/01/2025',
-      status: 'rejected',
-      avatar: 'AX',
-      bgColor: C.purple
-    }
-  ];
-
+  const navigate = useNavigate();
+  const [candidates, setCandidates] = useState([]);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+
+  const mapStatus = (status) => {
+    switch (status?.toLowerCase()) {
+      case "submitted": case "screening": case "interview": return "pending";
+      case "recruited": return "approved";
+      case "rejected": case "withdrawn": return "rejected";
+      default: return "pending";
+    }
+  };
+
+  const statusLabel = {
+    submitted: "Đã nộp",
+    screening: "Sàng lọc",
+    interview: "Phỏng vấn",
+    recruited: "Trúng tuyển",
+    rejected: "Từ chối",
+    withdrawn: "Rút hồ sơ"
+  };
+
+  const fixCvUrl = (url) => {
+    if (!url) return "";
+
+    if (url.startsWith("http")) return url;
+
+    return "https://api.d4f.io.vn" +
+      url.replace("/src/store/cv", "/cv");
+  };
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        const employer = getCurrentEmployer();
+
+        if (!employer?.emp_id) {
+          console.error("Không tìm thấy employer");
+          return;
+        }
+
+        const jobs = await jobService.getJobsByEmployer(employer.emp_id);
+
+        if (!jobs.length) {
+          console.warn("Employer chưa có job");
+          return;
+        }
+
+        const job = jobs[0];
+        const applications = await applicationService.getByJobId(job.job_id);
+        
+        const fullCandidates = await Promise.all(
+          applications.map(async (app) => {
+            const user = await getUserById(app.candidate_id);
+            
+            return {
+              id: app.application_id,
+              job_id: job.job_id,            
+              candidate_id: app.candidate_id,
+              name: user?.full_name || "N/A",
+              email: user?.email || "N/A",
+              phone: user?.phone_number || "",
+              gender: user?.gender || "",
+              dob: user?.dob || "",
+              address: user?.address || "",
+              position: job?.title || "N/A",
+              appliedDate: formatDate(app.created_at),
+              status: app.status,
+              uiStatus: mapStatus(app.status),
+              avatar: getInitials(user?.full_name),
+              bgColor: C.purple,
+              cv: fixCvUrl(app.cv_url)
+            };
+          })
+        );
+        setCandidates(fullCandidates.filter(Boolean));
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchCandidates();
+  }, []);
   const rowsPerPage = 5;
   const total = candidates.length;
   const totalPages = Math.ceil(total / rowsPerPage);
@@ -391,10 +442,34 @@ export default function CandidatesPage() {
   const currentCandidates = candidates.slice(start, end);
 
   const stats = [
-    { icon: Users, label: 'Tổng ứng viên', value: '8', bgColor: C.grayBg, iconColor: C.navy },
-    { icon: Clock, label: 'Chờ duyệt', value: '2', bgColor: C.yellowBg, iconColor: '#f59e0b' },
-    { icon: CheckCircle, label: 'Đã duyệt', value: '5', bgColor: C.greenBg, iconColor: C.green },
-    { icon: XCircle, label: 'Từ chối', value: '1', bgColor: C.grayBg, iconColor: C.navy }
+    {
+      icon: Users,
+      label: 'Tổng ứng viên',
+      value: candidates.length,
+      bgColor: C.grayBg,
+      iconColor: C.navy
+    },
+    {
+      icon: Clock,
+      label: 'Chờ duyệt',
+      value: candidates.filter(c => c.uiStatus === 'pending').length,
+      bgColor: C.yellowBg,
+      iconColor: '#f59e0b'
+    },
+    {
+      icon: CheckCircle,
+      label: 'Đã duyệt',
+      value: candidates.filter(c => c.uiStatus === 'approved').length,
+      bgColor: C.greenBg,
+      iconColor: C.green
+    },
+    {
+      icon: XCircle,
+      label: 'Từ chối',
+      value: candidates.filter(c => c.uiStatus === 'rejected').length,
+      bgColor: C.grayBg,
+      iconColor: C.navy
+    }
   ];
 
   const displayCandidates = candidates;
@@ -404,13 +479,33 @@ export default function CandidatesPage() {
     setModalOpen(true);
   };
 
-  const handleApprove = () => {
-    console.log('Approved');
+  const handleApprove = async (feedback) => {
+    const employer = getCurrentEmployer();
+    // await applicationService.updateStatus(selectedCandidate.id, "recruited");
+
+    await feedbackService.addFeedback({
+      job_id: selectedCandidate.job_id,
+      employer_id: employer.emp_id,
+      candidate_id: selectedCandidate.candidate_id,
+      rate: 5,
+      comment: feedback
+    });
+    const res = await feedbackService.getByEmployer(employer.emp_id);
     setModalOpen(false);
   };
 
-  const handleReject = () => {
-    console.log('Rejected');
+  const handleReject = async (feedback) => {
+    const employer = getCurrentEmployer();
+    // await applicationService.updateStatus(selectedCandidate.id, "rejected");
+
+    await feedbackService.addFeedback({
+      job_id: selectedCandidate.job_id,
+      employer_id: employer.emp_id,
+      candidate_id: selectedCandidate.candidate_id,
+      rate: 2,
+      comment: feedback
+    });
+    const res = await feedbackService.getByEmployer(employer.emp_id);
     setModalOpen(false);
   };
 
@@ -486,24 +581,13 @@ export default function CandidatesPage() {
             fontSize: 14, outline: 'none', cursor: 'pointer',
             minWidth: 180,
             appearance: 'none',
-            background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 14px center`
+            background: `${C.white} ${BG.dropdown}`
           }}>
             <option value="">Tất cả trạng thái</option>
             <option value="pending">Chờ duyệt</option>
             <option value="approved">Đã duyệt</option>
             <option value="rejected">Từ chối</option>
           </select>
-            <input
-            type="date"
-            style={{
-                padding: '10px 14px',
-                borderRadius: 8,
-                border: `1px solid ${C.border}`,
-                fontSize: 14,
-                outline: 'none',
-                minWidth: 150
-            }}
-            />
           <button style={{
             padding: '10px 32px', borderRadius: 8,
             border: 'none', background: C.blue,
@@ -572,33 +656,22 @@ export default function CandidatesPage() {
                       <span style={{ ...txt(14, 400) }}>{c.appliedDate}</span>
                     </td>
                     <td style={{ padding: '16px 20px' }}>
-                      {c.status === 'approved' && (
-                        <span style={{
-                          padding: '6px 14px', borderRadius: 16,
-                          background: C.greenBg, color: C.green,
-                          fontSize: 13, fontWeight: 600
-                        }}>
-                          Đã duyệt
-                        </span>
-                      )}
-                      {c.status === 'pending' && (
-                        <span style={{
-                          padding: '6px 14px', borderRadius: 16,
-                          background: C.yellowBg, color: '#f59e0b',
-                          fontSize: 13, fontWeight: 600
-                        }}>
-                          Chờ duyệt
-                        </span>
-                      )}
-                      {c.status === 'rejected' && (
-                        <span style={{
-                          padding: '6px 14px', borderRadius: 16,
-                          background: C.redBg, color: C.red,
-                          fontSize: 13, fontWeight: 600
-                        }}>
-                          Từ chối
-                        </span>
-                      )}
+                      <span style={{
+                        padding: '6px 14px',
+                        borderRadius: 16,
+                        background:
+                          c.uiStatus === 'approved' ? C.greenBg :
+                          c.uiStatus === 'pending' ? C.yellowBg :
+                          C.redBg,
+                        color:
+                          c.uiStatus === 'approved' ? C.green :
+                          c.uiStatus === 'pending' ? '#f59e0b' :
+                          C.red,
+                        fontSize: 13,
+                        fontWeight: 600
+                      }}>
+                        {statusLabel[c.status] || c.status}
+                      </span>
                     </td>
                     <td style={{ padding: '16px 20px' }}>
                       <div style={{ ...flex('center'), gap: 8 }}>
@@ -613,11 +686,13 @@ export default function CandidatesPage() {
                         >
                           <Eye size={18} color={C.navy} />
                         </button>
-                        <button style={{
-                          width: 36, height: 36, borderRadius: 8,
-                          border: 'none', background: C.blue,
-                          cursor: 'pointer',
-                          ...flex('center'), justifyContent: 'center'
+                        <button
+                          onClick={() => navigate(`/employer/messages/${c.id}`)}
+                          style={{
+                            width: 36, height: 36, borderRadius: 8,
+                            border: 'none', background: C.blue,
+                            cursor: 'pointer',
+                            ...flex('center'), justifyContent: 'center'
                         }}>
                           <MessageSquare size={18} color={C.white} />
                         </button>
@@ -701,6 +776,7 @@ export default function CandidatesPage() {
           candidate={selectedCandidate}
           onApprove={handleApprove}
           onReject={handleReject}
+          statusLabel={statusLabel}
         />
       )}
     </div>
