@@ -8,6 +8,8 @@ from src.api.v1.transaction import router as transaction_router
 from src.api.v1.feedback import router as feedback_router
 from src.api.v1.interview import router as interview_router
 from src.api.v1.application import router as application_router
+from src.api.v1.verification import router as verification_router
+from src.api.v1.payment import router as payment_router
 import uvicorn
 app = FastAPI(title="Job Platform API")
 
@@ -21,6 +23,8 @@ app.include_router(message_router, prefix="/v1")
 app.include_router(feedback_router, prefix="/v1")
 app.include_router(transaction_router, prefix="/v1")
 app.include_router(admin_router, prefix="/v1")
+app.include_router(verification_router, prefix="/v1")
+app.include_router(payment_router, prefix="/v1")
 
 
 if __name__ == "__main__":
