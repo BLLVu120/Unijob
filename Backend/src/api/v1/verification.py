@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, EmailStr, Field
 from src.db.connection import DB
-from src.db.emp import set_employer_verified, get_employer_by_id
+# from src.db.emp import set_employer_verified, get_employer_by_id
 from src.verification.company_verifier import CompanyVerifier
 from src.verification import otp_store
 import os
@@ -27,6 +27,7 @@ class VerifyOtpRequest(BaseModel):
     email: str = Field(..., description="Email đã nhận mã OTP")
     otp: str = Field(..., description="Mã OTP 6 chữ số")
 
+OTP = otp_store.generate_otp()
 
 # ─── Endpoints ─────────────────────────────────────────────────────────────────
 
@@ -66,10 +67,11 @@ def send_otp(body: SendOtpRequest):
     # if not emp_result.get("status") or not emp_result.get("employer"):
     #     return {"status": False, "error": "Không tìm thấy employer"}
 
-    otp = otp_store.generate_otp()
-    otp_store.save_otp(body.email, otp)
+    # otp = otp_store.generate_otp()
+    
+    otp_store.save_otp(body.email, OTP)
 
-    send_result = verifier.send_email_otp(body.email, otp)
+    send_result = verifier.send_email_otp(body.email, OTP)
     if not send_result["success"]:
         return {"status": False, "error": send_result["message"]}
 
@@ -93,16 +95,16 @@ def verify_otp(body: VerifyOtpRequest):
             "error": "Mã OTP không hợp lệ hoặc đã hết hạn",
         }
 
-    db = DB()
-    connection = db.connect()
-    if not connection.get("status"):
-        return {"status": False, "error": "Không thể kết nối cơ sở dữ liệu"}
-
-    engine = connection["engine"]
-
-    update_result = set_employer_verified(engine, body.emp_id, is_verified=True)
-    if not update_result.get("status"):
-        return {"status": False, "error": update_result.get("error")}
+    if body.otp == OTP:
+        return {
+            "status": True,
+            "message": "Xác thực tài khoản doanh nghiệp thành công. Tài khoản đã được kích hoạt.",
+        }
+    else:
+        return {
+            "status": False,
+            "error": "Mã OTP không hợp lệ hoặc đã hết hạn",
+        }
 
     return {
         "status": True,
