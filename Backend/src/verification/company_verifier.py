@@ -85,7 +85,7 @@ class CompanyVerifier:
             """
 
         message = Mail(
-            from_email=os.getenv("SENDGRID_FROM_EMAIL", "member@example.com"),
+            from_email=os.getenv("SENDGRID_FROM_EMAIL", "no-reply@example.com"),
             to_emails=email,
             subject="Mã OTP xác thực tài khoản doanh nghiệp - Unijob",
             html_content=html_content,
