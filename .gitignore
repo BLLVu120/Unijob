@@ -1,0 +1,29 @@
+# ── Bí mật / cấu hình môi trường ──────────────────────────────
+.env
+.env.*
+!.env.example
+*.local
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# ── Node / Vite ───────────────────────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+
+# ── Log & dữ liệu runtime ─────────────────────────────────────
+logs/
+*.log
+BE/Backend/src/store/cv/*
+!BE/Backend/src/store/cv/.gitkeep
+
+# ── Editor / OS ───────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
