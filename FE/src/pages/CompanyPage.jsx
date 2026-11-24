@@ -1,336 +1,273 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Search, Briefcase, 
-  ChevronLeft, ChevronRight, Coffee, ShoppingCart,
-  GraduationCap, Laptop
+  Search, Briefcase, ChevronLeft, ChevronRight, Coffee, ShoppingCart, GraduationCap, Laptop,
+  Building2, HeartPulse, Plane, Layers, MapPin, BadgeCheck, Eye, SearchX
 } from 'lucide-react';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
-import { flex, txt } from '../utils/styles';
-import { COLORS } from '../constants/colors';
+import { COLORS, SHADOW, GRADIENT } from '../constants/colors';
+import { getAllEmployers } from '../services/authService';
+import { jobService } from '../services/jobService';
+import { normalize } from '../utils/jobFormat';
+import { field } from '../utils/styles';
+import Select from '../components/Select';
 
 const C = COLORS;
+const PAGE_SIZE = 8; // 4 hàng x 2 thẻ
+
+// Ngành nghề trong hồ sơ công ty (trường "field")
+const FIELD_ICONS = {
+  'F&B': Coffee, 'Bán lẻ': ShoppingCart, 'Giáo dục': GraduationCap,
+  'Công nghệ': Laptop, 'Y tế': HeartPulse, 'Du lịch': Plane
+};
+const FIELDS = ['F&B', 'Bán lẻ', 'Công nghệ', 'Giáo dục', 'Y tế', 'Du lịch', 'Khác'];
+
 const CompanyCard = ({ company }) => {
+  const navigate = useNavigate();
+  const [hover, setHover] = useState(false);
   const IconComponent = company.icon;
 
   return (
-    <div style={{
-      background: C.white,
-      borderRadius: 16,
-      border: `1px solid ${C.border}`,
-      padding: '28px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-      transition: 'all 0.2s'
-    }}
-    onMouseEnter={e => {
-      e.currentTarget.style.transform = 'translateY(-4px)';
-      e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.1)';
-    }}
-    onMouseLeave={e => {
-      e.currentTarget.style.transform = 'translateY(0)';
-      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
-    }}
+    <div
+      onClick={() => navigate(`/company-detail/${company.id}`)}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: C.white, borderRadius: 18, padding: 22, cursor: 'pointer', minWidth: 0,
+        border: `1px solid ${hover ? C.blueBorder : C.border}`,
+        boxShadow: hover ? SHADOW.md : SHADOW.sm, transform: hover ? 'translateY(-2px)' : 'none',
+        transition: 'all .2s ease', display: 'flex', flexDirection: 'column', gap: 16
+      }}
     >
-      <div style={{ 
-        ...flex('center'), 
-        gap: 16, 
-        paddingBottom: 20,
-        borderBottom: `1px solid ${C.border}`,
-        marginBottom: 20
-      }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 14 }}>
+        {/* Icon vuông, cao đúng bằng khối tên công ty + ngành bên cạnh */}
         <div style={{
-          width: 72,
-          height: 72,
-          borderRadius: 14,
-          background: `${C.blue}`,
-          ...flex('center'),
-          justifyContent: 'center',
-          flexShrink: 0
+          alignSelf: 'stretch', aspectRatio: '1 / 1', borderRadius: 12, flexShrink: 0,
+          background: hover ? GRADIENT.primary : C.blueLight,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .2s ease'
         }}>
-          <IconComponent size={36} color={C.white} />
+          <IconComponent size={22} color={hover ? C.white : C.purple} />
         </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ ...flex('center'), gap: 5, marginBottom: 6 }}>
-            <h3 style={{ 
-              ...txt(18, 700),
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}>
+        <div style={{ flex: 1, minWidth: 0, minHeight: 44, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {company.name}
             </h3>
-            {company.verified && (
-              <FontAwesomeIcon icon={faCheckCircle} size="sm" color={COLORS.blue} />
-            )}
+            {company.verified && <BadgeCheck size={17} color={C.purple} style={{ flexShrink: 0 }} />}
           </div>
-          <p style={{ 
-            ...txt(14, 500, C.blue),
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
-            {company.industry}
+          <p style={{ fontSize: 13, color: C.gray, marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Layers size={13} /> {company.industry}
           </p>
         </div>
       </div>
 
-      <div style={{ 
-        ...flex('center'), 
-        justifyContent: 'space-between' 
+      {/* Phần giới thiệu bọc thẻ: nền xám nhạt + viền tím đậm bên trái (giống trang chi tiết công ty) */}
+      <div style={{
+        background: C.grayBg, borderLeft: `4px solid ${C.purple}`, borderRadius: 10, padding: '10px 14px'
       }}>
-        <div style={{ ...flex('center'), gap: 6 }}>
-          <Briefcase size={16} color={C.blue} />
-          <span style={{ ...txt(14, 500, C.blue) }}>
-            {company.jobs} việc làm đang tuyển
-          </span>
-        </div>
+        <p style={{
+          fontSize: 14, color: C.darkGray, lineHeight: 1.6,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+        }}>
+          {company.description || 'Công ty chưa cập nhật phần giới thiệu.'}
+        </p>
+      </div>
 
-        <button style={{
-          padding: '8px 20px',
-          borderRadius: 20,
-          border: 'none',
-          background: C.blue,
-          color: C.white,
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: 'pointer',
-          transition: 'all 0.2s'
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = C.purple}
-        onMouseLeave={e => e.currentTarget.style.background = C.blue}
+      {/* Giãn ra để đường kẻ + hàng dưới luôn sát đáy thẻ, thẳng hàng với các thẻ khác */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13, color: C.gray, minWidth: 0 }}>
+        <MapPin size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{company.address || 'Chưa cập nhật địa chỉ'}</span>
+      </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        paddingTop: 14, borderTop: `1px solid ${C.border}`
+      }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 999,
+          background: company.jobs ? C.greenBg : C.grayBg, color: company.jobs ? C.green : C.gray, fontSize: 12, fontWeight: 600
+        }}>
+          <Briefcase size={13} /> {company.jobs} việc đang tuyển
+        </span>
+        <button
+          onClick={e => { e.stopPropagation(); navigate(`/company-detail/${company.id}`); }}
+          style={{
+            height: 36, padding: '0 14px', borderRadius: 10, cursor: 'pointer',
+            border: `1px solid ${hover ? C.purple : C.blueBorder}`,
+            background: hover ? C.purple : C.blueLight, color: hover ? C.white : C.purple,
+            display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, flexShrink: 0
+          }}
         >
-          Xem chi tiết
+          <Eye size={15} /> Xem công ty
         </button>
       </div>
     </div>
   );
 };
 
-export default function EmployersPage() {
+const loadCompanies = async () => {
+  // Tin đang mở lấy từ API tìm kiếm công khai (đã lọc tin tắt / hết hạn ở BE)
+  const [employers, openJobs] = await Promise.all([getAllEmployers(), jobService.searchJobs()]);
+  return employers
+    .map(emp => ({
+      id: emp.emp_id,
+      name: emp.emp_name,
+      industry: emp.field || 'Chưa cập nhật ngành nghề',
+      field: emp.field || '',
+      description: emp.description,
+      address: emp.address,
+      jobs: openJobs.filter(j => j.employer_id === emp.emp_id).length,
+      icon: FIELD_ICONS[emp.field] || Building2,
+      verified: !!emp.is_verified
+    }))
+    // Công ty đã xác thực và có nhiều tin đang tuyển lên trước
+    .sort((a, b) => (b.verified - a.verified) || (b.jobs - a.jobs) || a.name.localeCompare(b.name));
+};
+
+export default function CompanyPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [industry, setIndustry] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [allCompanies, setAllCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [filters, setFilters] = useState({ q: '', field: '' });
 
-  const companies = [
-    {
-      id: 1,
-      name: 'The Coffee House',
-      industry: 'F&B',
-      jobs: 15,
-      icon: Coffee,
-      verified: true
-    },
-    {
-      id: 2,
-      name: 'Fashion Store ABC',
-      industry: 'Bán hàng',
-      jobs: 12,
-      icon: ShoppingCart,
-      verified: true
-    },
-    {
-      id: 3,
-      name: 'TutorVN',
-      industry: 'Gia sư - Dạy học',
-      jobs: 12,
-      icon: GraduationCap,
-      verified: true
-    },
-    {
-      id: 4,
-      name: 'Digital Agency XYZ',
-      industry: 'Công nghệ thông tin',
-      jobs: 6,
-      icon: Laptop,
-      verified: true
-    }
-  ];
+  useEffect(() => {
+    loadCompanies()
+      .then(setAllCompanies)
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const applyFilters = (next = { q: searchQuery, field: industry }) => {
+    setFilters(next);
+    setCurrentPage(1);
+  };
+
+  const filtered = useMemo(() => {
+    const q = normalize(filters.q.trim());
+    return allCompanies.filter(c =>
+      (!q || normalize(`${c.name} ${c.industry}`).includes(q)) &&
+      (!filters.field || c.field === filters.field)
+    );
+  }, [allCompanies, filters]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const companies = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
-    <div style={{
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      background: C.grayBg,
-      minHeight: '100vh'
-    }}>
-      <section style={{
-        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 75%, #f97316 100%)',
-        padding: '80px 40px',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
+    <div style={{ fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif", background: C.grayBg, minHeight: '100vh' }}>
+      <section style={{ background: GRADIENT.hero, padding: '56px 32px 96px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', top: -200, right: -60 }} />
+        {/* Tiêu đề bên trái, dòng mô tả bọc thẻ kính mờ nằm sát mép phải */}
         <div style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          textAlign: 'center',
-          position: 'relative',
-          zIndex: 1
+          maxWidth: 1200, margin: '0 auto', position: 'relative',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap'
         }}>
-          <h1 style={{ 
-            ...txt(48, 700, C.white), 
-            marginBottom: 16,
-            textShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}>
-            Khám phá các nhà tuyển dụng uy tín
+          <h1 style={{ fontSize: 40, fontWeight: 800, color: C.white, letterSpacing: '-0.03em' }}>
+            Nhà tuyển dụng uy tín
           </h1>
-          <p style={{ 
-            ...txt(18, 400, C.white), 
-            marginBottom: 40,
-            opacity: 0.95
+          {/* Cùng kiểu nhãn kính mờ ở trang chủ ("Nền tảng việc làm part-time cho sinh viên") */}
+          <p style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999,
+            background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.3)',
+            color: C.white, fontSize: 13, fontWeight: 600, maxWidth: 640
           }}>
-            Tìm hiểu về công ty, văn hóa làm việc và cơ hội nghề nghiệp tại hơn 5,000+ doanh nghiệp
+            <Building2 size={15} style={{ flexShrink: 0 }} />
+            <span>
+              Tìm hiểu về công ty, văn hóa làm việc và cơ hội nghề nghiệp
+              {allCompanies.length > 0 && ` tại ${allCompanies.length} doanh nghiệp`}
+            </span>
           </p>
+        </div>
+      </section>
 
-          <div style={{
-            background: C.white,
-            borderRadius: 16,
-            padding: '16px',
-            ...flex('center'),
-            gap: 12,
-            maxWidth: 900,
-            margin: '0 auto',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
-          }}>
-            <div style={{
-              ...flex('center'),
-              gap: 10,
-              flex: 1,
-              padding: '10px 14px',
-              borderRadius: 8,
-              background: C.white,
-              border: `1px solid ${C.border}`
-            }}>
-              <Search size={20} color={C.gray} />
-              <input
-                placeholder="Tìm công ty, ngành nghề"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: 15,
-                  flex: 1,
-                  background: 'transparent'
-                }}
-              />
-            </div>
-
-            <select
+      <div style={{ maxWidth: 1264, margin: '-56px auto 0', padding: '0 32px 72px', position: 'relative' }}>
+        <div style={{
+          background: C.white, borderRadius: 18, padding: 14, boxShadow: SHADOW.lg, border: `1px solid ${C.border}`,
+          display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 10, marginBottom: 20
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...field({ height: 48 }) }}>
+            <Search size={18} color={C.grayLight} />
+            <input
+              placeholder="Tìm theo tên công ty hoặc ngành nghề"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && applyFilters()}
+              style={{ border: 'none', outline: 'none', boxShadow: 'none', background: 'transparent', fontSize: 15, flex: 1 }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...field({ height: 48 }) }}>
+            <Layers size={18} color={C.grayLight} />
+            <Select wrapperStyle={{ flex: 1, minWidth: 0 }} iconRight={0}
               value={industry}
               onChange={e => setIndustry(e.target.value)}
-              style={{
-                padding: '12px 16px',
-                borderRadius: 8,
-                border: `1px solid ${C.border}`,
-                fontSize: 15,
-                outline: 'none',
-                cursor: 'pointer',
-                minWidth: 200,
-                appearance: 'none',
-                background: `${C.white} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E") no-repeat right 16px center`
-              }}
+              style={{ border: 'none', outline: 'none', boxShadow: 'none', background: 'transparent', fontSize: 14, flex: 1, cursor: 'pointer' }}
             >
               <option value="">Tất cả ngành nghề</option>
-              <option value="fnb">F&B</option>
-              <option value="retail">Bán hàng</option>
-              <option value="education">Giáo dục</option>
-              <option value="tech">Công nghệ</option>
-            </select>
-
-            <button style={{
-              padding: '12px 32px',
-              borderRadius: 8,
-              border: 'none',
-              background: C.blue,
-              color: C.white,
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              whiteSpace: 'nowrap'
+              {FIELDS.map(f => <option key={f} value={f}>{f}</option>)}
+            </Select>
+          </div>
+          <button
+            onClick={() => applyFilters()}
+            style={{
+              padding: '0 28px', height: 48, borderRadius: 12, border: 'none', background: C.purple, color: C.white,
+              fontSize: 15, fontWeight: 600, cursor: 'pointer', boxShadow: SHADOW.primary,
+              display: 'flex', alignItems: 'center', gap: 8
             }}
-            onMouseEnter={e => e.currentTarget.style.background = C.purple}
-            onMouseLeave={e => e.currentTarget.style.background = C.blue}
+          >
+            <Search size={17} /> Tìm kiếm
+          </button>
+        </div>
+
+        <div style={{
+          background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, boxShadow: SHADOW.sm,
+          minHeight: 64, padding: '12px 20px', marginBottom: 20, display: 'flex', alignItems: 'center'
+        }}>
+          <p style={{ fontSize: 15, color: C.gray }}>
+            {loading ? 'Đang tải...' : <>Có <b style={{ color: C.navy }}>{filtered.length}</b> nhà tuyển dụng{filters.q || filters.field ? ' phù hợp' : ''}</>}
+          </p>
+        </div>
+
+        {companies.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 18 }}>
+            {companies.map(company => <CompanyCard key={company.id} company={company} />)}
+          </div>
+        ) : !loading && (
+          <div style={{ background: C.white, borderRadius: 18, border: `1px solid ${C.border}`, padding: '64px 32px', textAlign: 'center' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: 18, background: error ? C.redBg : C.blueLight, margin: '0 auto 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <SearchX size={28} color={error ? C.red : C.purple} />
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 6 }}>
+              {error ? 'Không tải được danh sách công ty' : 'Không tìm thấy công ty phù hợp'}
+            </h3>
+            <p style={{ fontSize: 14, color: error ? C.red : C.gray }}>{error || 'Thử đổi từ khóa hoặc ngành nghề.'}</p>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 36 }}>
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              style={{ width: 40, height: 40, borderRadius: 12, border: `1px solid ${C.border}`, background: C.white, cursor: 'pointer', opacity: currentPage === 1 ? 0.45 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              Tìm kiếm
+              <ChevronLeft size={18} />
+            </button>
+            <span style={{ fontSize: 14, fontWeight: 600, color: C.gray }}>{currentPage}/{totalPages}</span>
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage >= totalPages}
+              style={{ width: 40, height: 40, borderRadius: 12, border: `1px solid ${C.border}`, background: C.white, cursor: 'pointer', opacity: currentPage >= totalPages ? 0.45 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <ChevronRight size={18} />
             </button>
           </div>
-        </div>
-      </section>
-
-      <section style={{
-        maxWidth: 1200,
-        margin: '0 auto',
-        padding: '60px 40px'
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 24,
-          marginBottom: 48
-        }}>
-          {companies.map(company => (
-            <CompanyCard key={company.id} company={company} />
-          ))}
-        </div>
-
-        <div style={{
-          ...flex('center'),
-          justifyContent: 'center',
-          gap: 16
-        }}>
-          <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              border: `1px solid ${C.border}`,
-              background: C.white,
-              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-              opacity: currentPage === 1 ? 0.5 : 1,
-              ...flex('center'),
-              justifyContent: 'center',
-              transition: 'all 0.2s'
-            }}
-          >
-            <ChevronLeft size={20} color={C.gray} />
-          </button>
-
-          <span style={{ ...txt(15, 500, C.gray) }}>
-            1/1 trang
-          </span>
-
-          <button
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage >= 1}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              border: `1px solid ${C.border}`,
-              background: C.white,
-              cursor: currentPage >= 1 ? 'not-allowed' : 'pointer',
-              opacity: currentPage >= 1 ? 0.5 : 1,
-              ...flex('center'),
-              justifyContent: 'center',
-              transition: 'all 0.2s'
-            }}
-          >
-            <ChevronRight size={20} color={C.gray} />
-          </button>
-        </div>
-      </section>
-
-      <style>{`
-        input:focus, select:focus {
-          border-color: ${C.blue} !important;
-        }
-        input::placeholder {
-          color: ${C.grayLight};
-        }
-      `}</style>
+        )}
+      </div>
     </div>
   );
 }

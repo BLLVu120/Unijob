@@ -1,99 +1,59 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { X, CheckCircle2, AlertCircle, TriangleAlert } from 'lucide-react';
+import { COLORS, SHADOW } from '../constants/colors';
+import { flex, txt } from '../utils/styles';
 
-const Toast = ({ message, type = 'error', onClose }) => {
-  const [closing, setClosing] = useState(false);
+const C = COLORS;
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setClosing(true);
-      setTimeout(onClose, 300);
-    }, 3200);
-
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  const colors = {
-    error:   { bg: '#FEF2F2', border: '#FECACA', text: '#DC2626', icon: '✕' },
-    warning: { bg: '#FFFBEB', border: '#FDE68A', text: '#D97706', icon: '⚠' },
-    success: { bg: '#F0FDF4', border: '#BBF7D0', text: '#16A34A', icon: '✓' },
-  };
-
-  const c = colors[type];
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: '24px',
-        right: '24px',
-        zIndex: 99999,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '14px 18px',
-        borderRadius: '12px',
-        background: c.bg,
-        border: `1px solid ${c.border}`,
-        boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-        minWidth: '300px',
-        maxWidth: '400px',
-        animation: closing
-          ? 'slideOut 0.3s ease forwards'
-          : 'slideIn 0.3s ease'
-      }}
-    >
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(120%); opacity: 0; }
-          to   { transform: translateX(0); opacity: 1; }
-        }
-
-        @keyframes slideOut {
-          from { transform: translateX(0); opacity: 1; }
-          to   { transform: translateX(120%); opacity: 0; }
-        }
-      `}</style>
-
-      <div style={{
-        width: '28px',
-        height: '28px',
-        borderRadius: '50%',
-        background: c.border,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '14px',
-        color: c.text,
-        flexShrink: 0
-      }}>
-        {c.icon}
-      </div>
-
-      <span style={{
-        fontSize: '14px',
-        color: c.text,
-        fontWeight: '500',
-        flex: 1
-      }}>
-        {message}
-      </span>
-
-      <button
-        onClick={() => setClosing(true)}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          color: c.text,
-          fontSize: '16px',
-          padding: '2px',
-          opacity: 0.6
-        }}
-      >
-        ✕
-      </button>
-    </div>
-  );
+const TYPES = {
+  success: { color: C.green, bg: C.greenBg, border: C.greenBorder, icon: CheckCircle2 },
+  error: { color: C.red, bg: C.redBg, border: C.redBorder, icon: AlertCircle },
+  warning: { color: C.orange, bg: C.orangeBg, border: C.orangeLight, icon: TriangleAlert }
 };
 
-export default Toast;
+/**
+ * Toast thông báo ở góc phải dưới màn hình (dùng chung cho mọi trang).
+ * Hai cách gọi:
+ *   <Toast message={{ type: 'success', text: '...' }} onClose={...} />
+ *   <Toast message="..." type="warning" onClose={...} />   (cách cũ, vẫn hỗ trợ)
+ * type: 'success' | 'error' | 'warning'
+ * onClose: xóa thông báo ở trang cha — nên bọc bằng useCallback để bộ đếm không bị đặt lại mỗi lần render.
+ * Tự ẩn sau `duration` ms; bấm × để tắt ngay.
+ */
+export default function Toast({ message, type = 'error', onClose, duration = 4000 }) {
+  useEffect(() => {
+    if (!message || !onClose) return undefined;
+    const t = setTimeout(onClose, duration);
+    return () => clearTimeout(t);
+  }, [message, onClose, duration]);
+
+  if (!message) return null;
+  const msg = typeof message === 'string' ? { type, text: message } : message;
+  const t = TYPES[msg.type] || TYPES.error;
+  const Icon = t.icon;
+
+  return (
+    <div role="status" style={{
+      position: 'fixed', right: 24, bottom: 24, zIndex: 10000, maxWidth: 380,
+      ...flex('center'), gap: 12, padding: '14px 14px 14px 16px', borderRadius: 14,
+      background: C.white, border: `1px solid ${t.border}`,
+      borderLeft: `4px solid ${t.color}`, boxShadow: SHADOW.lg, animation: 'toastIn .25s ease'
+    }}>
+      <span style={{
+        width: 32, height: 32, borderRadius: 10, flexShrink: 0, background: t.bg,
+        ...flex('center'), justifyContent: 'center'
+      }}>
+        <Icon size={18} color={t.color} />
+      </span>
+      <span style={{ ...txt(14, 600, C.navy), flex: 1 }}>{msg.text}</span>
+      {onClose && (
+        <button onClick={onClose} title="Đóng" style={{
+          width: 28, height: 28, borderRadius: 8, border: 'none', background: 'transparent',
+          cursor: 'pointer', ...flex('center'), justifyContent: 'center', flexShrink: 0
+        }}>
+          <X size={16} color={C.gray} />
+        </button>
+      )}
+    </div>
+  );
+}

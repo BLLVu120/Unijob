@@ -1,92 +1,77 @@
-import {
-  User, FileText, Bookmark, Send,
-  MessageSquare, Lock,
-  Building2, Users, CreditCard, Receipt, ShieldCheck
-} from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { flex, txt } from '../utils/styles';
-import { COLORS } from '../constants/colors';
+import { COLORS, GRADIENT } from '../constants/colors';
+import { EMPLOYER_MENU, CANDIDATE_MENU } from '../constants/menus';
+import { getInitials } from '../utils/textUtils';
+import { getCurrentUser } from '../services/authService';
 
 const C = COLORS;
 
+// Thanh bên của khu vực ứng viên / nhà tuyển dụng (nằm dưới Navbar)
 const Sidebar = ({ isEmployer }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-
-  const employerNav = [
-    { icon: Building2, label: 'Hồ sơ công ty', path: '/employer/company-profile' },
-    { icon: FileText, label: 'Tin tuyển dụng', path: '/employer/jobs' },
-    { icon: Users, label: 'Ứng viên', path: '/employer/candidates' },
-    { icon: MessageSquare, label: 'Tin nhắn', badge: 3, path: '/employer/messages' },
-    { icon: CreditCard, label: 'Đăng kí gói', path: '/employer/subscription' },
-    { icon: Receipt, label: 'Lịch sử giao dịch', path: '/employer/transactions' },
-    { icon: ShieldCheck, label: 'Xác thực', path: '/employer/verification' }
-  ];
-
-  const userNav = [
-    { icon: User, label: 'Hồ sơ cá nhân', path: '/candidate/profile' },
-    { icon: Bookmark, label: 'Việc đã lưu', path: '/candidate/saved-jobs' },
-    { icon: Send, label: 'Việc đã ứng tuyển', path: '/candidate/applied-jobs' },
-    { icon: MessageSquare, label: 'Tin nhắn', badge: 3, path: '/candidate/messages' },
-    { icon: Lock, label: 'Đổi mật khẩu', path: '/candidate/change-password' }
-  ];
-
-  const nav = isEmployer ? employerNav : userNav;
+  const user = getCurrentUser();
+  const nav = isEmployer ? EMPLOYER_MENU : CANDIDATE_MENU;
 
   return (
     <aside style={{
-      width: 220,
+      width: 248,
+      flexShrink: 0,
       background: C.white,
       borderRight: `1px solid ${C.border}`,
-      minHeight: '100%',
-      ...flex('flex-start', 'column'),
-      padding: '24px 0'
+      position: 'sticky',
+      top: 64,
+      height: 'calc(100vh - 64px)',
+      overflowY: 'auto',
+      display: 'flex',
+      flexDirection: 'column',
+      padding: '20px 14px'
     }}>
-      <div style={{ padding: '0 24px 24px' }}>
-        <h1 style={{ ...txt(22, 700, C.blue), marginBottom: 4 }}>UNIJOB</h1>
-        <p style={{ ...txt(12, 500, C.gray) }}>
-          {isEmployer ? 'Employer Panel' : 'Candidate Panel'}
-        </p>
-      </div>
-
-      <nav style={{ flex: 1, width: '100%' }}>
-        {nav.map((item, i) => {
+      <p style={{ fontSize: 11, fontWeight: 700, color: C.grayLight, letterSpacing: '.08em', padding: '0 12px 8px' }}>
+        QUẢN LÝ
+      </p>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {nav.map(item => {
           const Icon = item.icon;
           const isActive = pathname.startsWith(item.path);
-
           return (
             <div
-              key={i}
+              key={item.path}
               onClick={() => navigate(item.path)}
               style={{
-                ...flex('center'),
-                gap: 12,
-                padding: '12px 24px',
-                background: isActive ? C.blueLight : 'transparent',
-                borderRight: isActive ? `3px solid ${C.blue}` : '3px solid transparent',
-                cursor: 'pointer'
+                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
+                background: isActive ? C.blueLight : 'transparent', cursor: 'pointer', transition: 'background .15s ease'
               }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = C.grayBg; }}
+              onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
             >
-              <Icon size={18} color={isActive ? C.blue : C.gray} />
-              <span style={{ ...txt(14, 500, isActive ? C.blue : C.navy) }}>
+              <Icon size={18} color={isActive ? C.purple : C.gray} />
+              <span style={{ fontSize: 14, fontWeight: isActive ? 600 : 500, color: isActive ? C.purple : C.darkGray }}>
                 {item.label}
               </span>
-
-              {item.badge && (
-                <span style={{
-                  ...txt(11, 600, C.white),
-                  background: C.red,
-                  borderRadius: 10,
-                  padding: '3px 10px',
-                  marginLeft: 'auto'
-                }}>
-                  {item.badge}
-                </span>
-              )}
             </div>
           );
         })}
       </nav>
+
+      {/* Thẻ người dùng nằm sát đáy thanh bên */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px',
+        marginTop: 'auto', borderRadius: 14, background: C.grayBg
+      }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 12, background: GRADIENT.primary, color: C.white, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14
+        }}>
+          {getInitials(user?.name)}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {user?.name}
+          </p>
+          <p style={{ fontSize: 12, color: C.gray }}>{isEmployer ? 'Nhà tuyển dụng' : 'Ứng viên'}</p>
+        </div>
+      </div>
     </aside>
   );
 };

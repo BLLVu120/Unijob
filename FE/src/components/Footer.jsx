@@ -1,104 +1,89 @@
-import { COLORS } from "../constants/colors";
+import { Link } from 'react-router-dom';
+import { COLORS, DARK } from '../constants/colors';
+import Logo from './Logo';
+
+const C = COLORS;
+
+const COLUMNS = [
+  {
+    title: 'Dành cho ứng viên',
+    links: [
+      { label: 'Tìm việc làm', to: '/jobs' },
+      { label: 'Danh sách công ty', to: '/company' },
+      { label: 'Tạo tài khoản', to: '/register' }
+    ]
+  },
+  {
+    title: 'Dành cho nhà tuyển dụng',
+    links: [
+      { label: 'Đăng tin tuyển dụng', to: '/employer/jobs' },
+      { label: 'Gói dịch vụ', to: '/employer/subscription' },
+      { label: 'Xác thực doanh nghiệp', to: '/employer/verification' }
+    ]
+  },
+  {
+    title: 'Về Unijob',
+    links: [
+      { label: 'Giới thiệu', to: '/' },
+      { label: 'Điều khoản sử dụng', to: '/' },
+      { label: 'Chính sách bảo mật', to: '/' }
+    ]
+  }
+];
 
 const Footer = () => (
   <footer style={{
-    background: COLORS.darkBg,
-    padding: '48px 48px 24px',
-    color: COLORS.white,
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    background: C.navyDark,
+    padding: '56px 40px 28px',
+    color: C.white,
+    fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif"
   }}>
     <div style={{
-      maxWidth: '1200px',
+      maxWidth: 1200,
       margin: '0 auto',
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '100px',
-      marginBottom: '32px'
+      gridTemplateColumns: '1.4fr repeat(3, 1fr)',
+      gap: 48,
+      marginBottom: 40
     }}>
       <div>
-        <h3 style={{
-          fontSize: '20px',
-          fontWeight: '700',
-          marginBottom: '16px',
-          letterSpacing: '0.5px'
-        }}>
-          UNIJOB
-        </h3>
-        <p style={{
-          fontSize: '14px',
-          lineHeight: '1.6',
-          opacity: 0.8,
-          margin: 0
-        }}>
-          Nền tảng tìm việc làm thêm và part-time hàng đầu Việt Nam.<br />
-          Kết nối ứng viên với hàng ngàn cơ hội việc làm linh hoạt.
+        <Logo dark />
+        <p style={{ fontSize: 14, lineHeight: 1.7, color: DARK.footerText, marginTop: 16, maxWidth: 320 }}>
+          Nền tảng tìm việc part-time an toàn cho sinh viên — kết nối với nhà tuyển dụng đã được xác thực.
         </p>
       </div>
-      <div>
-        <h4 style={{
-          fontSize: '16px',
-          fontWeight: '600',
-          marginBottom: '16px'
-        }}>
-          Về chúng tôi
-        </h4>
-        <ul style={{
-          listStyle: 'none',
-          padding: 0,
-          margin: 0
-        }}>
-          {['Giới thiệu', 'Liên hệ', 'Điều khoản', 'Chính sách'].map((item, idx) => (
-            <li key={idx} style={{ marginBottom: '12px' }}>
-              <a href="#" style={{
-                color: COLORS.white,
-                textDecoration: 'none',
-                fontSize: '14px',
-                opacity: 0.7,
-                transition: 'opacity 0.2s'
-              }}>
-                {item}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <h4 style={{
-          fontSize: '16px',
-          fontWeight: '600',
-          marginBottom: '16px'
-        }}>
-          Kết nối
-        </h4>
-        <ul style={{
-          listStyle: 'none',
-          padding: 0,
-          margin: 0
-        }}>
-          {['Facebook', 'TikTok'].map((item, idx) => (
-            <li key={idx} style={{ marginBottom: '12px' }}>
-              <a href="#" style={{
-                color: COLORS.white,
-                textDecoration: 'none',
-                fontSize: '14px',
-                opacity: 0.7,
-                transition: 'opacity 0.2s'
-              }}>
-                {item}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {COLUMNS.map(col => (
+        <div key={col.title}>
+          <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: C.white }}>{col.title}</h4>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {col.links.map(link => (
+              <li key={link.label}>
+                <Link
+                  to={link.to}
+                  style={{ color: DARK.footerText, textDecoration: 'none', fontSize: 14 }}
+                  onMouseEnter={e => { e.currentTarget.style.color = C.white; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = DARK.footerText; }}
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
     <div style={{
-      textAlign: 'center',
-      paddingTop: '24px',
-      borderTop: `1px solid rgba(255, 255, 255, 0.1)`,
-      fontSize: '13px',
-      opacity: 0.6
+      maxWidth: 1200,
+      margin: '0 auto',
+      display: 'flex',
+      justifyContent: 'space-between',
+      paddingTop: 24,
+      borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+      fontSize: 13,
+      color: DARK.footerMuted
     }}>
-      © 2025 UNIJOB. All rights reserved.
+      <span>© {new Date().getFullYear()} Unijob. Bảo lưu mọi quyền.</span>
+      <span>Dự án EXE201</span>
     </div>
   </footer>
 );

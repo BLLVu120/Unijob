@@ -1,0 +1,33 @@
+# Giữ tên project cũ để dùng tiếp container / volume đang có
+name: backend
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: unijob_postgres
+    environment:
+      POSTGRES_DB: unijob_db
+      POSTGRES_USER: unijob_user
+      POSTGRES_PASSWORD: unijob_password
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U unijob_user -d unijob_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: unijob_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+volumes:
+  postgres_data:
+    # Giữ tên volume cũ để không mất dữ liệu khi chuyển docker-compose.yml từ BE/Backend lên BE
+    name: backend_postgres_data

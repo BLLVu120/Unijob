@@ -1,53 +1,56 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { pageTitleFor } from './utils/pageTitle';
+import { getCurrentUser, logout } from './services/authService';
 
 import MainLayout from './layouts/MainLayout';
 import CandidateLayout from './layouts/CandidateLayout';
 import EmployerLayout from './layouts/EmployerLayout';
 import InternalLayout from './layouts/InternalLayout';
-import AdminLayout from './layouts/AdminLayout';
-import ModeratorLayout from './layouts/ModeratorLayout';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import EmailVerificationPage from './pages/EmailVerificationPage';
+import VerificationConfirmationPage from './pages/VerificationConfirmationPage';
+import PaymentResultPage from './pages/PaymentResultPage';
 import CompanyPage from './pages/CompanyPage';
 import JobPage from './pages/JobPage';
 import JobDetailPage from './pages/JobDetailPage';
 import CompanyDetailPage from './pages/CompanyDetailPage';
 
-import CandidateChat from './candidate_page/CandidateChat';
-import CandidateProfile from './candidate_page/CandidateProfile';
-import ChangePassword from './candidate_page/ChangePassword';
-import JobApplied from './candidate_page/JobApplied';
+import CandidateChat from './pages/candidate/CandidateChat';
+import CandidateProfile from './pages/candidate/CandidateProfile';
+import ChangePassword from './pages/ChangePassword';
+import JobApplied from './pages/candidate/JobApplied';
+import SavedJobs from './pages/candidate/SavedJobs';
+import InterviewSchedule from './pages/candidate/InterviewSchedule';
 
-import CompanyProfile from './company_page/CompanyProfile';
-import Subscription from './company_page/Subscription';
-import TransactionHistory from './company_page/TransactionHistory';
-import CompanyVerification from './company_page/CompanyVerification';
-import CompanyChat from './company_page/CompanyChat';
-import CandidateList from './company_page/CandidateList';
-import JobManagement from './company_page/JobManagement';
+import CompanyProfile from './pages/employer/CompanyProfile';
+import Subscription from './pages/employer/Subscription';
+import TransactionHistory from './pages/employer/TransactionHistory';
+import CompanyVerification from './pages/employer/CompanyVerification';
+import CompanyChat from './pages/employer/CompanyChat';
+import CandidateList from './pages/employer/CandidateList';
+import JobManagement from './pages/employer/JobManagement';
 
-import InternalLogin from './internal_page/InternalLogin';
-import UserManagement from './internal_page/admin_page/UserManagement';
-import CompanyManagement from './internal_page/admin_page/CompanyManagement';
-import JobApproval from './internal_page/moderator_page/JobApproval';
-import Reports from './internal_page/moderator_page/Reports';
+import UserManagement from './pages/admin/UserManagement';
+import CompanyManagement from './pages/admin/CompanyManagement';
+import JobApproval from './pages/moderator/JobApproval';
 
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
-  const [user, setUser] = useState(null);
-
+  // Tiêu đề tab trình duyệt theo trang đang xem
+  const { pathname } = useLocation();
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
+    document.title = pageTitleFor(pathname);
+  }, [pathname]);
+
+  const [user, setUser] = useState(getCurrentUser);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    logout();
     setUser(null);
   };
 
@@ -58,23 +61,27 @@ export default function App() {
         <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/register" element={<Register />} />
         <Route path="/verify-email" element={<EmailVerificationPage />} />
+        <Route path="/verify-success" element={<VerificationConfirmationPage />} />
 
         <Route path="/jobs" element={<JobPage />} />
-        <Route path="/job-detail" element={<JobDetailPage />} />
+        <Route path="/job-detail/:id" element={<JobDetailPage />} />
 
         <Route path="/company" element={<CompanyPage />} />
-        <Route path="/company-detail" element={<CompanyDetailPage />} />
+        <Route path="/company-detail/:id" element={<CompanyDetailPage />} />
 
-        <Route element={<ProtectedRoute user={user} allowedRoles={["candidate"]} />}>
+        <Route element={<ProtectedRoute user={user} allowedRoles={['candidate']} />}>
           <Route path="/candidate" element={<CandidateLayout />}>
             <Route path="profile" element={<CandidateProfile />} />
             <Route path="change-password" element={<ChangePassword />} />
             <Route path="messages" element={<CandidateChat />} />
             <Route path="applied-jobs" element={<JobApplied />} />
+            <Route path="saved-jobs" element={<SavedJobs />} />
+            <Route path="interviews" element={<InterviewSchedule />} />
           </Route>
         </Route>
 
-        <Route element={<ProtectedRoute user={user} allowedRoles={["employer"]} />}>
+        <Route element={<ProtectedRoute user={user} allowedRoles={['employer']} />}>
+          <Route path="/payment/result" element={<PaymentResultPage />} />
           <Route path="/employer" element={<EmployerLayout />}>
             <Route path="company-profile" element={<CompanyProfile />} />
             <Route path="subscription" element={<Subscription />} />
@@ -83,25 +90,28 @@ export default function App() {
             <Route path="messages" element={<CompanyChat />} />
             <Route path="candidates" element={<CandidateList />} />
             <Route path="jobs" element={<JobManagement />} />
+            <Route path="change-password" element={<ChangePassword />} />
           </Route>
         </Route>
       </Route>
 
-      <Route path="/internal/login" element={<InternalLogin />} />
+      {/* Trang đăng nhập nội bộ cũ → dùng chung trang đăng nhập */}
+      <Route path="/internal/login" element={<Navigate to="/login" replace />} />
 
-      <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-        <Route path="/internal/admin" element={<AdminLayout onLogout={handleLogout} />}>
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route path="/internal/admin" element={<InternalLayout onLogout={handleLogout} />}>
           <Route index element={<UserManagement />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="companies" element={<CompanyManagement />} />
         </Route>
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={["moderator"]} />}>
-        <Route path="/internal/moderator" element={<ModeratorLayout onLogout={handleLogout} />}>
+      <Route element={<ProtectedRoute allowedRoles={['moderator']} />}>
+        <Route path="/internal/moderator" element={<InternalLayout onLogout={handleLogout} />}>
           <Route index element={<JobApproval />} />
           <Route path="job-approval" element={<JobApproval />} />
-          <Route path="reports" element={<Reports />} />
+          {/* Trang Báo cáo đã bỏ (BE chưa có API) → chuyển về Duyệt tin */}
+          <Route path="reports" element={<Navigate to="/internal/moderator/job-approval" replace />} />
         </Route>
       </Route>
     </Routes>

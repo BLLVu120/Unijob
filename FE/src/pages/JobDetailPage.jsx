@@ -1,35 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from "react-router-dom";
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  Send, Briefcase, MapPin, Clock,
-  Users, Gift, X, Upload, AlertTriangle,
-  CheckCircle2, ExternalLink, Calendar
+  Send, Briefcase, MapPin, Clock, Users, Gift, X, Upload, AlertTriangle, ExternalLink, Calendar, ChevronLeft, BadgeCheck, Bookmark, Wallet, Layers, GraduationCap, Info, Building2
 } from 'lucide-react';
-import { flex, txt } from '../utils/styles';
-import { COLORS } from "../constants/colors";
-import { getInitials, formatDate } from "../utils/textUtils"
-import { jobService } from "../services/jobService";
+import { flex, txt, card } from '../utils/styles';
+import { COLORS, GRADIENT, SHADOW, TILE_GRADIENTS } from '../constants/colors';
+import { formatSalary, formatExperience, JOB_TYPE_LABELS, readSavedJobs, toggleSavedJob } from '../utils/jobFormat';
+import { getInitials, formatDate } from '../utils/textUtils';
+import { jobService } from '../services/jobService';
 import { applicationService } from '../services/applicationService';
-import { getEmployerById, getCurrentUser } from "../services/authService";
+import { getEmployerById, getCurrentUser } from '../services/authService';
 import Toast from '../components/Toast';
 
 const gap = (n) => ({ gap: `${n}px` });
-
-const Card = ({ children, style = {} }) => (
-  <div style={{
-    width: '100%',
-    background: COLORS.white, borderRadius: 12, border: `1px solid ${COLORS.border}`,
-    padding: '28px 28px', ...style
-  }}>
-    {children}
-  </div>
-);
-
-const SectionHead = ({ icon: Icon, title }) => (
-  <h3 style={{ ...txt(20, 700), marginBottom: 14, ...flex('center'), ...gap(10) }}>
-    <Icon size={22} color={COLORS.navy} /> {title}
-  </h3>
-);
 
 const WarningBox = ({ children }) => (
   <div style={{
@@ -37,8 +20,8 @@ const WarningBox = ({ children }) => (
     borderRadius: 10, padding: '14px 16px',
     ...flex('flex-start'), ...gap(10)
   }}>
-    <AlertTriangle size={18} color="#92400e" style={{ flexShrink: 0, marginTop: 2 }} />
-    <div style={{ ...txt(13, 400, '#92400e'), lineHeight: 1.55 }}>{children}</div>
+    <AlertTriangle size={18} color={COLORS.brown} style={{ flexShrink: 0, marginTop: 2 }} />
+    <div style={{ ...txt(13, 400, COLORS.brown), lineHeight: 1.55 }}>{children}</div>
   </div>
 );
 
@@ -69,26 +52,27 @@ const ModalShell = ({ open, onClose, children, maxW = 520 }) => {
 };
 
 const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
+  // Hộp thoại chỉ được mount khi mở (xem nơi gọi) nên mỗi lần mở là state mới, không cần effect reset
   const [file, setFile] = useState(null);
-  useEffect(() => {
-    if (!open) {
-      setFile(null);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }, [open]);
   const fileRef = useRef();
 
   const handleSubmit = async () => {
     try {
       if (!file) {
-        setToast({ type: "warning", message: "Vui lòng upload CV" });
+        setToast({ type: 'warning', message: 'Vui lòng upload CV' });
         return;
       }
 
       const user = getCurrentUser();
 
-      if (!user || user.role !== "candidate") {
-        setToast({ type: "error", message: "Bạn phải đăng nhập với tài khoản ứng viên" });
+      if (!user || user.role !== 'candidate') {
+        setToast({ type: 'error', message: 'Bạn phải đăng nhập với tài khoản ứng viên' });
+        return;
+      }
+
+      const applied = await applicationService.getByCandidateId(user.candidate_id);
+      if (applied.some(a => a.job_id === job.job_id && a.status !== 'withdrawn')) {
+        setToast({ type: 'warning', message: 'Bạn đã ứng tuyển vị trí này rồi' });
         return;
       }
 
@@ -98,20 +82,20 @@ const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
         job_id: job.job_id,
         candidate_id: user.candidate_id,
         cv_url: uploadRes.cv_url,
-        status: "submitted",
+        status: 'submitted',
       };
 
       await applicationService.addApplication(payload);
       setFile(null);
       onClose();
       setToast({
-        type: "success",
-        message: "Hồ sơ đã được gửi thành công!"
+        type: 'success',
+        message: 'Hồ sơ đã được gửi thành công!'
       });
 
     } catch (err) {
       console.error(err);
-      setToast({ type: "error", message: err.message || "Ứng tuyển thất bại" });
+      setToast({ type: 'error', message: err.message || 'Ứng tuyển thất bại' });
     }
   };
 
@@ -121,14 +105,14 @@ const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
 
     if (!f) return;
 
-    if (f.type !== "application/pdf") {
-      setToast({ type: "error", message: "Chỉ chấp nhận file PDF" });
+    if (f.type !== 'application/pdf') {
+      setToast({ type: 'error', message: 'Chỉ chấp nhận file PDF' });
       return;
     }
 
     const maxSize = 5 * 1024 * 1024;
     if (f.size > maxSize) {
-      setToast({ type: "error", message: "File vượt quá 5MB" });
+      setToast({ type: 'error', message: 'File vượt quá 5MB' });
       return;
     }
 
@@ -140,7 +124,7 @@ const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
   return (
     <ModalShell open={open} onClose={onClose}>
       <div style={{
-        background: 'linear-gradient(135deg, #f97316, #fb923c)',
+        background: GRADIENT.primary,
         borderRadius: '16px 16px 0 0', padding: '24px 28px 20px',
         ...flex('center'), justifyContent: 'space-between'
       }}>
@@ -161,11 +145,17 @@ const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
 
       <div style={{ padding: '24px 28px 28px' }}>
         <div style={{
-          background: '#fff7ed', border: `1px solid #fed7aa`, borderRadius: 10,
+          background: COLORS.orangeBg, border: '1px solid #fed7aa', borderLeft: '4px solid #f97316', borderRadius: 10,
           padding: '12px 16px', marginBottom: 22
         }}>
-          <p style={{ ...txt(15, 600, COLORS.navy) }}>{job?.title}</p>
-          <p style={{ ...txt(13, 400, COLORS.gray), marginTop: 2 }}>{employer?.emp_name}</p>
+          <p style={{ ...txt(15, 600, COLORS.navy), ...flex('center'), gap: 6 }}>
+            <Briefcase size={14} color={COLORS.gray} style={{ flexShrink: 0 }} />
+            <span style={{ ...txt(13, 500, COLORS.gray) }}>Việc làm:</span>{job?.title}
+          </p>
+          <p style={{ ...txt(14, 500, COLORS.darkGray), marginTop: 4, ...flex('center'), gap: 6 }}>
+            <Building2 size={14} color={COLORS.gray} style={{ flexShrink: 0 }} />
+            <span style={{ ...txt(13, 500, COLORS.gray) }}>Công ty:</span>{employer?.emp_name}
+          </p>
         </div>
 
         <label style={labelStyle}>Tải lên CV <span style={{ color: COLORS.red }}>*</span></label>
@@ -176,7 +166,7 @@ const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
           style={{
             border: `2px dashed ${file ? COLORS.green : COLORS.grayLight}`,
             borderRadius: 10, padding: '28px 16px', textAlign: 'center',
-            cursor: 'pointer', background: file ? '#f0fdf4' : COLORS.offWhite,
+            cursor: 'pointer', background: file ? COLORS.greenBg : COLORS.offWhite,
             marginBottom: 22, transition: 'all 0.2s'
           }}
         >
@@ -200,7 +190,7 @@ const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
           onClick={handleSubmit}
           style={{
             marginTop: 22, width: '100%', padding: '14px', borderRadius: 10, border: 'none',
-            background: 'linear-gradient(135deg, #f97316, #fb923c)',
+            background: GRADIENT.primary,
             color: COLORS.white, fontSize: 16, fontWeight: 600, cursor: 'pointer',
             ...flex('center'), justifyContent: 'center', ...gap(8)
           }}
@@ -212,119 +202,60 @@ const ApplyModal = ({ open, onClose, setToast, job, employer }) => {
   );
 };
 
-const ReportModal = ({ open, onClose }) => {
-  const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', address: '', email: '', content: '' });
-  const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
-
-  const inputStyle = {
-    width: '100%', padding: '11px 14px', borderRadius: 8,
-    border: `1px solid ${COLORS.border}`, fontSize: 14, color: COLORS.navy,
-    outline: 'none', boxSizing: 'border-box', background: COLORS.white
-  };
-
-  useEffect(() => { if (!open) setSubmitted(false); }, [open]);
-
-  if (submitted) {
-    return (
-      <ModalShell open={open} onClose={onClose} maxW={460}>
-        <div style={{ padding: '28px 28px 32px' }}>
-          <div style={{ ...flex('center'), justifyContent: 'space-between', marginBottom: 28 }}>
-            <span style={{ ...txt(20, 700) }}>Báo cáo tin tuyển dụng</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-              <X size={20} color={COLORS.gray} />
-            </button>
-          </div>
-          <div style={{
-            background: COLORS.greenBg, border: `1px solid ${COLORS.greenBorder}`,
-            borderRadius: 12, padding: '28px 20px', textAlign: 'center'
-          }}>
-            <CheckCircle2 size={40} color={COLORS.green} style={{ marginBottom: 12 }} />
-            <p style={{ ...txt(15, 500, '#166534') }}>Báo cáo của bạn đã được tiếp nhận và xử lý.</p>
-          </div>
-        </div>
-      </ModalShell>
-    );
-  }
-
-  return (
-    <ModalShell open={open} onClose={onClose}>
-      <div style={{ padding: '28px 28px 32px' }}>
-        <div style={{ ...flex('center'), justifyContent: 'space-between', marginBottom: 28 }}>
-          <span style={{ ...txt(20, 700) }}>Báo cáo tin tuyển dụng</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <X size={20} color={COLORS.gray} />
-          </button>
-        </div>
-
-        <div style={{ ...flex('center'), ...gap(12), marginBottom: 22 }}>
-          <span style={{ ...txt(14, 600), minWidth: 110 }}>Tin tuyển dụng:</span>
-          <span style={{ ...txt(14, 400, COLORS.gray) }}>Nhân viên Phục vụ Part-time</span>
-        </div>
-
-        <div style={{ ...flex('flex-start'), ...gap(12), marginBottom: 22 }}>
-          <label style={{ ...txt(14, 600), minWidth: 110, paddingTop: 2 }}>Nội dung <span style={{ color: COLORS.red }}>*</span></label>
-          <textarea
-            value={form.content} onChange={set('content')}
-            placeholder="Nhập nội dung"
-            rows={5}
-            style={{ ...inputStyle, flex: 1, resize: 'vertical', minHeight: 100 }}
-          />
-        </div>
-
-        <WarningBox>
-          <strong>Lưu ý:</strong> Báo cáo sai sự thất có thể dẫn đến việc tài khoản bị khóa. Thông tin của bạn sẽ được bảo mật và chỉ sử dụng cho mục đích xác minh.
-        </WarningBox>
-
-        <div style={{ ...flex('center'), justifyContent: 'flex-end', ...gap(12), marginTop: 24 }}>
-          <button onClick={onClose} style={{
-            padding: '10px 28px', borderRadius: 8, border: `1px solid ${COLORS.border}`,
-            background: COLORS.white, fontSize: 15, fontWeight: 500, color: COLORS.navy, cursor: 'pointer'
-          }}>Hủy</button>
-          <button onClick={() => setSubmitted(true)} style={{
-            padding: '10px 28px', borderRadius: 8, border: 'none',
-            background: COLORS.red, color: COLORS.white, fontSize: 15, fontWeight: 600, cursor: 'pointer'
-          }}>Gửi báo cáo</button>
-        </div>
-      </div>
-    </ModalShell>
-  );
-};
-
 export default function JobDetailPage() {
   const currentUser = getCurrentUser();
-  const isCandidate = currentUser?.role === "candidate";
+  const isCandidate = currentUser?.role === 'candidate';
+  const navigate = useNavigate();
   const { id } = useParams();
+  const [saved, setSaved] = useState(() => readSavedJobs().includes(id));
   const [job, setJob] = useState(null);
   const [employer, setEmployer] = useState(null);
   const [applyOpen, setApplyOpen] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [loadState, setLoadState] = useState('loading');
 
   useEffect(() => {
     const fetchJob = async () => {
       try {
         const jobData = await jobService.getJobById(id);
+        if (!jobData) {
+          setLoadState('notfound');
+          return;
+        }
         setJob(jobData);
+        setLoadState('ok');
 
-        if (jobData?.employer_id) {
+        if (jobData.employer_id) {
           const emp = await getEmployerById(jobData.employer_id);
           setEmployer(emp);
         }
-      } catch (err) {
-        console.error("Lỗi lấy job:", err);
+      } catch {
+        setLoadState('notfound');
       }
     };
 
     fetchJob();
   }, [id]);
 
-  if (!job) return;
+  if (!job) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', ...txt(16, 500, COLORS.gray) }}>
+        {loadState === 'loading' ? 'Đang tải tin tuyển dụng...' : 'Không tìm thấy tin tuyển dụng này.'}
+      </div>
+    );
+  }
+
+  const sections = [
+    { icon: Briefcase, title: 'Mô tả công việc', text: job.description },
+    { icon: Users, title: 'Yêu cầu ứng viên', text: job.requirements },
+    { icon: Calendar, title: 'Thời gian làm việc', text: job.working_shifts },
+    { icon: Gift, title: 'Quyền lợi', text: job.benefits }
+  ];
 
   return (
     <div style={{
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      background: '#f1f5f9', minHeight: '100vh', paddingBottom: 28
+      fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+      background: COLORS.grayBg, minHeight: '100vh', paddingBottom: 64
     }}>
     {toast && (
       <Toast
@@ -333,218 +264,222 @@ export default function JobDetailPage() {
         onClose={() => setToast(null)}
       />
     )}
-    <div style={{ display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-        <div style={{ width: 700, display: 'flex', marginTop: 28, flexDirection: 'column', gap: 20 }}>
-          <Card>
-            <div style={{ ...flex('center'), justifyContent: 'space-between', marginBottom: 10 }}>
-              <div>
-                <h1 style={{ ...txt(26, 700), marginBottom: 4 }}>{job.title}</h1>
-                <div style={{ ...flex('center'), ...gap(5) }}>
-                  <span style={{ ...txt(14, 500, COLORS.gray) }}>{employer?.emp_name}</span>
-                </div>
-              </div>
-              <div style={{ ...flex('center'), ...gap(10), marginLeft: 29 }}>
-                <button
-                  onClick={() => {
-                    if (!isCandidate) return;
-                    setApplyOpen(true);
-                  }}
-                  disabled={!isCandidate}
-                  style={{
-                    padding: '8px 18px', borderRadius: 20, border: 'none',
-                    background: isCandidate ? COLORS.navy : COLORS.grayLight,
-                    cursor: isCandidate ? 'pointer' : 'not-allowed', 
-                    color: COLORS.white, fontSize: 14, fontWeight: 600,
-                    opacity: isCandidate ? 1 : 0.6,
-                    ...flex('center'), ...gap(6)
-                  }}
-                >
-                  <Send size={16} /> Ứng tuyển
-                </button>
-              </div>
-            </div>
 
-            <div style={{ ...flex('center'), ...gap(40), marginTop: 18, paddingTop: 18, borderTop: `1px solid ${COLORS.border}` }}>
-              {[
-                { 
-                  icon: Briefcase,  
-                  label: 'MỨC LƯƠNG',  
-                  value: `${job.salary_min?.toLocaleString()} – ${job.salary_max?.toLocaleString()} VNĐ`,
-                  valueColor: COLORS.blueText 
-                },
-                { 
-                  icon: MapPin,     
-                  label: 'ĐỊA ĐIỂM',
-                  value: `${job.location}`,
-                },
-                { 
-                  icon: Clock,      
-                  label: 'KINH NGHIỆM',  
-                  value: `${job.experience === 0 ? "Không yêu cầu" : `${job.experience} năm`}`
-                }
-              ].map(({ icon: Icon, label, value, valueColor }) => (
-                <div key={label} style={{ ...flex('center'), ...gap(8) }}>
-                  <Icon size={18} color={COLORS.grayMid} />
-                  <div>
-                    <p style={{ ...txt(11, 600, COLORS.grayMid), textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</p>
-                    <p style={{ ...txt(14, 600, valueColor || COLORS.navy), marginTop: 2 }}>{value}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <SectionHead icon={Briefcase} title="Mô tả công việc" />
-            <p style={{ ...txt(14, 400, COLORS.gray), marginBottom: 14 }}>
-              {job.description}
-            </p>
-          </Card>
-
-          <Card>
-            <SectionHead icon={Users} title="Yêu cầu ứng viên" />
-            <p style={{ ...txt(14, 400, COLORS.gray), marginBottom: 14 }}>
-              {job.requirements}
-            </p>
-          </Card>
-
-          <Card>
-            <SectionHead icon={Calendar} title="Thời gian làm việc" />
-            <p style={{ ...txt(14, 400, COLORS.gray), marginBottom: 14 }}>
-              {job.working_shifts}
-            </p>
-          </Card>
-
-          <Card>
-            <SectionHead icon={Gift} title="Quyền lợi" />
-            <p style={{ ...txt(14, 400, COLORS.gray), marginBottom: 14 }}>
-              {job.benefits}
-            </p>
-          </Card>
-        </div>
-
-        <div style={{  width: 360, display: 'flex', flexDirection: 'column', gap: 20, marginTop: 28 }}>
-          <Card>
-            <div style={{ ...flex('center'), ...gap(16), marginBottom: 20 }}>
-              <div style={{
-                width: 72, height: 72, borderRadius: 14,
-                background: 'linear-gradient(135deg, #f97316, #fb923c)',
-                ...flex('center'), justifyContent: 'center'
-              }}>
-                <span style={{ ...txt(30, 800, COLORS.white), textAlign: 'center', lineHeight: 1.2 }}>
-                  {getInitials(employer?.emp_name)}
-                </span>
-              </div>
-              <span style={{ ...txt(18, 700) }}>{employer?.emp_name}</span>
-            </div>
-
-            {[
-              { icon: Users, label: 'Quy mô:', value: employer?.scope },
-              { icon: Briefcase, label: 'Lĩnh vực:', value: employer?.field },
-              { icon: MapPin, label: 'Địa chỉ:', value: employer?.address }
-            ].map(({ icon: Icon, label, value }, index) => (
-              <div key={index} style={{ ...flex('flex-start'), ...gap(10), marginBottom: 12 }}>
-                <Icon size={17} color={COLORS.grayMid} style={{ marginTop: 2, flexShrink: 0 }} />
-                <div>
-                  <span style={{ ...txt(13, 600, COLORS.gray) }}>{label} </span>
-                  <span style={{ ...txt(13, 500, COLORS.navy) }}>{value || "Chưa cập nhật"}</span>
-                </div>
-              </div>
-            ))}
-
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-              {employer?.website && (
-                <a
-                  href={employer.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    ...txt(14, 600, COLORS.blueText),
-                    textDecoration: 'none'
-                  }}
-                >
-                  Xem trang công ty <ExternalLink size={15} />
-                </a>
-              )}
-            </div>
-          </Card>
-
-          <Card>
-            <h3 style={{ ...txt(18, 700), marginBottom: 18, ...flex('center'), ...gap(8) }}>
-              <span style={{
-                width: 28, height: 28, borderRadius: '50%', background: COLORS.navy,
-                ...flex('center'), justifyContent: 'center'
-              }}>
-                <span style={{ color: COLORS.white, fontSize: 15, fontWeight: 700 }}>i</span>
-              </span>
-              Thông tin chung
-            </h3>
-            
-            {[
-              { label: 'SỐ LƯỢNG TUYỂN', value: `${job.num_slot} người`, color: COLORS.green },
-              { label: 'HẠN NỘP HỒ SƠ', value: formatDate(job.expiry_date), color: COLORS.red },
-              { label: 'CẤP BẬC', value: job.role },
-              { label: 'HỌC VẤN', value: job.education_level }
-            ].map(({ label, value, color }, i, arr) => {
-              const isLast = i === arr.length - 1;
-              return (
-                  <div
-                  key={label}
-                  style={{
-                      paddingBottom: isLast ? 0 : 14,
-                      marginBottom: isLast ? 0 : 14,
-                      borderBottom: isLast ? 'none' : `1px solid ${COLORS.border}`
-                  }}
-                  >
-                  <p style={{ ...txt(11, 700, COLORS.grayMid), marginBottom: 4 }}>
-                      {label}
-                  </p>
-                  <p style={{ ...txt(14, 600, color || COLORS.navy) }}>{value}</p>
-                  </div>
-              );
-            })}
-          </Card>
-
-          {isCandidate && (
+    <div style={{ background: COLORS.white, borderBottom: `1px solid ${COLORS.border}` }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 32px' }}>
+        <Link to="/jobs" style={{ ...txt(13, 600, COLORS.gray), textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 18 }}>
+          <ChevronLeft size={16} /> Quay lại danh sách việc làm
+        </Link>
+        <div style={{ ...flex('center'), justifyContent: 'space-between', gap: 24 }}>
+          <div style={{ ...flex('center'), gap: 18, minWidth: 0 }}>
             <div style={{
-              background: COLORS.yellow, border: `1px solid ${COLORS.yellowBorder}`,
-              borderRadius: 12, padding: 22
+              width: 72, height: 72, borderRadius: 18, background: GRADIENT.primary, flexShrink: 0,
+              ...flex('center'), justifyContent: 'center', boxShadow: SHADOW.primary
             }}>
-              <h4 style={{ ...txt(16, 700, '#92400e'), marginBottom: 12, ...flex('center'), ...gap(8) }}>
-                <AlertTriangle size={18} color="#92400e" /> Lưu ý khi ứng tuyển
-              </h4>
-              <ul style={{ margin: 0, paddingLeft: 18, marginBottom: 16 }}>
-                {[
-                  'Không chuyển tiền đặt cọc cho bất kỳ lý do gì',
-                  'Không cung cấp thông tin các nhân nhạy cảm qua email/điện thoại',
-                  'Xác minh thông tin công ty trước khi ứng tuyển'
-                ].map((it, i) => (
-                  <li key={i} style={{ ...txt(13, 400, '#92400e'), marginBottom: 5 }}>{it}</li>
-                ))}
-              </ul>
-              <p style={{ ...txt(13, 400, '#92400e'), marginBottom: 16 }}>
-                Nếu bạn thấy rằng tin tuyển dụng này không đúng, hãy phản ánh với chúng tôi.
-              </p>
+              <span style={{ ...txt(24, 800, COLORS.white) }}>{getInitials(employer?.emp_name, 'start')}</span>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <h1 style={{ ...txt(28, 800), lineHeight: 1.2, marginBottom: 6 }}>{job.title}</h1>
+              <div style={{ ...flex('center'), gap: 6 }}>
+                <Link to={`/company-detail/${job.employer_id}`} style={{ ...txt(15, 600, COLORS.purple), textDecoration: 'none' }}>
+                  {employer?.emp_name}
+                </Link>
+                {employer?.is_verified && <BadgeCheck size={17} color={COLORS.purple} />}
+              </div>
+            </div>
+          </div>
+          <div style={{ ...flex('center'), gap: 10, flexShrink: 0 }}>
+            <button
+              onClick={() => setSaved(toggleSavedJob(job.job_id))}
+              style={{
+                height: 46, padding: '0 18px', borderRadius: 12, cursor: 'pointer', fontSize: 14, fontWeight: 600,
+                border: `1px solid ${saved ? COLORS.blueBorder : COLORS.border}`,
+                background: saved ? COLORS.blueLight : COLORS.white, color: saved ? COLORS.purple : COLORS.navy,
+                ...flex('center'), gap: 8
+              }}
+            >
+              <Bookmark size={17} fill={saved ? COLORS.purple : 'none'} /> {saved ? 'Đã lưu' : 'Lưu tin'}
+            </button>
+            {/* Nút ứng tuyển chỉ hiện với ứng viên / khách; nhà tuyển dụng & quản trị thì ẩn */}
+            {(isCandidate || !currentUser) && (
               <button
-                onClick={() => setReportOpen(true)}
+                onClick={() => (isCandidate ? setApplyOpen(true) : navigate('/login'))}
                 style={{
-                  width: '100%', padding: '11px', borderRadius: 8, border: 'none',
-                  background: COLORS.red, color: COLORS.white, fontSize: 14, fontWeight: 600,
-                  cursor: 'pointer', ...flex('center'), justifyContent: 'center', ...gap(6)
+                  height: 46, padding: '0 24px', borderRadius: 12, border: 'none', background: COLORS.purple,
+                  color: COLORS.white, fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: SHADOW.primary,
+                  ...flex('center'), gap: 8
                 }}
               >
-                <AlertTriangle size={16} /> Báo cáo tin tuyển dụng
+                <Send size={17} /> {isCandidate ? 'Ứng tuyển ngay' : 'Đăng nhập để ứng tuyển'}
               </button>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 26 }}>
+          {[
+            { icon: Wallet, label: 'Mức lương', value: formatSalary(job.salary_min, job.salary_max) },
+            { icon: MapPin, label: 'Địa điểm', value: job.location || '—' },
+            { icon: Clock, label: 'Kinh nghiệm', value: formatExperience(job.experience) },
+            { icon: Layers, label: 'Hình thức', value: JOB_TYPE_LABELS[job.job_type] || '—' }
+          ].map(({ icon: Icon, label, value }, i) => (
+            // Ô gradient cùng kiểu ô thông tin ở trang hồ sơ
+            <div key={label} style={{
+              position: 'relative', overflow: 'hidden', ...flex('center'), gap: 12, padding: '14px 16px',
+              borderRadius: 14, background: TILE_GRADIENTS[i], boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)', minWidth: 0
+            }}>
+              <div style={{
+                position: 'absolute', width: 110, height: 110, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.12)', top: -48, right: -36, pointerEvents: 'none'
+              }} />
+              <div style={{
+                width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.3)', ...flex('center'), justifyContent: 'center', flexShrink: 0
+              }}>
+                <Icon size={18} color={COLORS.white} />
+              </div>
+              <div style={{ minWidth: 0, position: 'relative' }}>
+                <p style={{ ...txt(12, 500, 'rgba(255,255,255,0.85)') }}>{label}</p>
+                <p style={{ ...txt(14, 700, COLORS.white), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</p>
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </div>
 
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 32px 0', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 24, alignItems: 'start' }}>
+      {/* 4 mục tách riêng: tiêu đề nằm ngoài, nội dung trong thẻ riêng */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {sections.map(({ icon: Icon, title, text }) => {
+          const lines = (text || '').split('\n').map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+          return (
+            <section key={title}>
+              <h3 style={{ ...txt(18, 700), marginBottom: 12, ...flex('center'), gap: 10 }}>
+                <span style={{ width: 34, height: 34, borderRadius: 10, background: COLORS.blueLight, ...flex('center'), justifyContent: 'center' }}>
+                  <Icon size={17} color={COLORS.purple} />
+                </span>
+                {title}
+              </h3>
+              <div style={{ ...card(), padding: '18px 24px', borderLeft: `4px solid ${COLORS.purple}` }}>
+                {lines.length === 0 ? (
+                  <p style={{ ...txt(14, 400, COLORS.gray) }}>Chưa cập nhật</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {lines.map((line, i) => (
+                      <li key={i} style={{ ...flex('flex-start'), gap: 10 }}>
+                        {/* Dấu chấm đầu dòng */}
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: COLORS.purple, flexShrink: 0, marginTop: 9 }} />
+                        <span style={{ ...txt(15, 400, COLORS.darkGray), lineHeight: 1.55 }}>{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, position: 'sticky', top: 88 }}>
+        {/* Tiêu đề nằm ngoài thẻ, cùng kiểu các mục bên trái */}
+        <div>
+        <h3 style={{ ...txt(18, 700), marginBottom: 12, ...flex('center'), gap: 10 }}>
+          <span style={{ width: 34, height: 34, borderRadius: 10, background: COLORS.blueLight, ...flex('center'), justifyContent: 'center' }}>
+            <Info size={17} color={COLORS.purple} />
+          </span>
+          Thông tin chung
+        </h3>
+        <div style={{ ...card(), padding: '8px 24px' }}>
+          {[
+            { icon: Users, label: 'Số lượng tuyển', value: job.num_slot ? `${job.num_slot} người` : '—' },
+            { icon: Calendar, label: 'Hạn nộp hồ sơ', value: job.expiry_date ? formatDate(job.expiry_date) : 'Không thời hạn', color: COLORS.red },
+            { icon: Briefcase, label: 'Cấp bậc', value: job.role || '—' },
+            { icon: GraduationCap, label: 'Học vấn', value: job.education_level || '—' }
+          ].map(({ icon: Icon, label, value, color }, i, arr) => (
+            <div key={label} style={{
+              ...flex('center'), gap: 12, padding: '12px 0',
+              borderBottom: i === arr.length - 1 ? 'none' : `1px solid ${COLORS.border}`
+            }}>
+              <Icon size={18} color={COLORS.grayLight} />
+              <span style={{ ...txt(14, 400, COLORS.gray), flex: 1 }}>{label}</span>
+              <span style={{ ...txt(14, 600, color || COLORS.navy) }}>{value}</span>
+            </div>
+          ))}
+        </div>
+        </div>
+
+        {/* Thẻ công ty: nền tím nhạt chuyển dần sang trắng */}
+        <div style={{
+          ...card(), padding: 24, border: `1px solid ${COLORS.blueBorder}`,
+          background: 'linear-gradient(160deg, #ebe7ff 0%, #f5f3ff 55%, #ffffff 100%)'
+        }}>
+          <div style={{ ...flex('center'), gap: 14, marginBottom: 18 }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14, background: GRADIENT.primary, flexShrink: 0,
+              ...flex('center'), justifyContent: 'center', boxShadow: SHADOW.primary
+            }}>
+              <span style={{ ...txt(18, 800, COLORS.white) }}>{getInitials(employer?.emp_name, 'start')}</span>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ ...txt(16, 700) }}>{employer?.emp_name}</p>
+              {employer?.is_verified && (
+                // inline-flex + lineHeight 1 để icon và chữ thẳng hàng
+                <span style={{
+                  ...txt(12, 600, COLORS.purple), display: 'inline-flex', alignItems: 'center', gap: 4,
+                  lineHeight: 1, marginTop: 5
+                }}>
+                  <BadgeCheck size={14} style={{ display: 'block', flexShrink: 0 }} /> Đã xác thực
+                </span>
+              )}
+            </div>
+          </div>
+          {[
+            { icon: Users, label: 'Quy mô', value: employer?.scope },
+            { icon: Briefcase, label: 'Lĩnh vực', value: employer?.field },
+            { icon: MapPin, label: 'Địa chỉ', value: employer?.address }
+          ].map(({ icon: Icon, label, value }) => (
+            <div key={label} style={{ ...flex('flex-start'), gap: 10, marginBottom: 12 }}>
+              <Icon size={16} color={COLORS.grayLight} style={{ marginTop: 3, flexShrink: 0 }} />
+              <span style={{ ...txt(14, 400, COLORS.gray) }}>
+                {label}: <span style={{ color: COLORS.navy, fontWeight: 500 }}>{value || 'Chưa cập nhật'}</span>
+              </span>
+            </div>
+          ))}
+          <Link
+            to={`/company-detail/${job.employer_id}`}
+            style={{
+              marginTop: 8, ...flex('center'), justifyContent: 'center', gap: 6, padding: '11px', borderRadius: 12,
+              border: `1px solid ${COLORS.blueBorder}`, background: COLORS.white, ...txt(14, 600, COLORS.purple), textDecoration: 'none'
+            }}
+          >
+            Xem trang công ty <ExternalLink size={15} />
+          </Link>
+        </div>
+
+        {isCandidate && (
+          <div style={{
+            background: COLORS.yellowBg, border: `1px solid ${COLORS.yellowBorder}`,
+            borderRadius: 16, padding: 22
+          }}>
+            <h4 style={{ ...txt(15, 700, COLORS.brown), marginBottom: 12, ...flex('center'), gap: 8 }}>
+              <AlertTriangle size={18} color={COLORS.brown} /> Lưu ý khi ứng tuyển
+            </h4>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {[
+                'Không chuyển tiền đặt cọc cho bất kỳ lý do gì',
+                'Không cung cấp thông tin cá nhân nhạy cảm qua email/điện thoại',
+                'Xác minh thông tin công ty trước khi ứng tuyển'
+              ].map((it, i) => (
+                <li key={i} style={{ ...txt(13, 400, COLORS.brown), marginBottom: 5 }}>{it}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+
+      {applyOpen && (
       <ApplyModal
         open={applyOpen}
         onClose={() => setApplyOpen(false)}
@@ -552,19 +487,8 @@ export default function JobDetailPage() {
         job={job}
         employer={employer}
       />
-      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
+      )}
 
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(110%); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
-        }
-        input:focus, textarea:focus { border-color: #3b82f6 !important; }
-        input::placeholder, textarea::placeholder { color: #94a3b8; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-      `}</style>
     </div>
   );
 }

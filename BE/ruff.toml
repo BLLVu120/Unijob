@@ -1,0 +1,6 @@
+# Quy ước code BE (Unijob): PEP 8, kiểm tra bằng `ruff check src tests`
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "N", "I"]

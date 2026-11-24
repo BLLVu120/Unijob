@@ -1,76 +1,57 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin, Calendar, Briefcase, Shield, Zap, CreditCard, CheckCircle, IdCard } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { User, Users, Building2, Mail, Lock, Eye, EyeOff, Phone, MapPin, Calendar, Briefcase, IdCard, ChevronDown } from 'lucide-react';
 import { COLORS } from '../constants/colors';
+import { registerCandidate, registerEmployer } from '../services/authService';
+import AuthHero from '../components/AuthHero';
+import FormError from '../components/FormError';
+import PasswordStrength from '../components/PasswordStrength';
+import { firstFailedRule } from '../utils/password';
+
+// Thẻ chọn vai trò — cùng kiểu với trang Đăng nhập (icon trong ô vuông bên trái, chữ bên phải)
+const ROLES = [
+  { key: 'candidate', icon: User, title: 'Ứng viên', subtitle: 'Tìm việc làm' },
+  { key: 'employer', icon: Building2, title: 'Nhà tuyển dụng', subtitle: 'Đăng tin tuyển' }
+];
 
 const RoleSelector = ({ selectedRole, onRoleChange }) => (
-  <div style={{
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px',
-    marginBottom: '24px'
-  }}>
-    <button
-      onClick={() => onRoleChange('candidate')}
-      style={{
-        padding: '20px',
-        borderRadius: '12px',
-        border: selectedRole === 'candidate' ? `2px solid ${COLORS.blue}` : `2px solid ${COLORS.border}`,
-        background: selectedRole === 'candidate' ? 'rgba(59, 130, 246, 0.05)' : COLORS.white,
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '8px'
-      }}
-    >
-      <User size={32} color={selectedRole === 'candidate' ? COLORS.blue : COLORS.navy} strokeWidth={2} />
-      <div style={{
-        fontSize: '15px',
-        fontWeight: '600',
-        color: COLORS.navy
-      }}>
-        Ứng viên
-      </div>
-      <div style={{
-        fontSize: '12px',
-        color: COLORS.gray
-      }}>
-        Tìm việc làm
-      </div>
-    </button>
-    
-    <button
-      onClick={() => onRoleChange('employer')}
-      style={{
-        padding: '20px',
-        borderRadius: '12px',
-        border: selectedRole === 'employer' ? `2px solid ${COLORS.blue}` : `2px solid ${COLORS.border}`,
-        background: selectedRole === 'employer' ? 'rgba(59, 130, 246, 0.05)' : COLORS.white,
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '8px'
-      }}
-    >
-      <Building2 size={32} color={selectedRole === 'employer' ? COLORS.blue : COLORS.navy} strokeWidth={2} />
-      <div style={{
-        fontSize: '15px',
-        fontWeight: '600',
-        color: COLORS.navy
-      }}>
-        Nhà tuyển dụng
-      </div>
-      <div style={{
-        fontSize: '12px',
-        color: COLORS.gray
-      }}>
-        Đăng tin tuyển
-      </div>
-    </button>
+  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+    {ROLES.map(({ key, icon, title, subtitle }) => {
+      const Icon = icon;
+      const active = selectedRole === key;
+      return (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onRoleChange(key)}
+          style={{
+            padding: '12px',
+            borderRadius: '14px',
+            border: `2px solid ${active ? COLORS.purple : COLORS.border}`,
+            background: active ? COLORS.blueLight : COLORS.white,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            textAlign: 'left',
+            minWidth: 0
+          }}
+        >
+          <span style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            background: active ? COLORS.purple : COLORS.grayBg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+          }}>
+            <Icon size={18} color={active ? COLORS.white : COLORS.navy} strokeWidth={2} />
+          </span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: COLORS.navy, whiteSpace: 'nowrap' }}>{title}</span>
+            <span style={{ display: 'block', fontSize: '12px', color: COLORS.gray, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subtitle}</span>
+          </span>
+        </button>
+      );
+    })}
   </div>
 );
 
@@ -132,44 +113,13 @@ const InputField = ({ label, type = 'text', placeholder, icon: Icon, required, v
           }}
         >
           {showPassword ? (
-            <EyeOff size={18} color={COLORS.gray} />
-          ) : (
             <Eye size={18} color={COLORS.gray} />
+          ) : (
+            <EyeOff size={18} color={COLORS.gray} />
           )}
         </button>
       )}
     </div>
-  </div>
-);
-
-const FeatureItem = ({ icon: Icon, text }) => (
-  <div style={{
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '16px',
-    marginBottom: '20px'
-  }}>
-    <div style={{
-      width: '48px',
-      height: '48px',
-      borderRadius: '12px',
-      background: 'rgba(255, 255, 255, 0.15)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0
-    }}>
-      <Icon size={24} color={COLORS.white} strokeWidth={2} />
-    </div>
-    <p style={{
-      fontSize: '15px',
-      lineHeight: '1.6',
-      color: COLORS.white,
-      margin: 0,
-      paddingTop: '12px'
-    }}>
-      {text}
-    </p>
   </div>
 );
 
@@ -208,8 +158,8 @@ const navigate = useNavigate();
 
     if (!formData.password)
       newErrors.password = 'Vui lòng nhập mật khẩu';
-    else if (formData.password.length < 8)
-      newErrors.password = 'Mật khẩu tối thiểu 8 ký tự';
+    else if (firstFailedRule(formData.password))
+      newErrors.password = `Mật khẩu chưa đạt: ${firstFailedRule(formData.password).text.toLowerCase()}`;
 
     if (formData.confirmPassword !== formData.password)
       newErrors.confirmPassword = 'Mật khẩu không khớp';
@@ -241,23 +191,26 @@ const navigate = useNavigate();
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const mockUser = {
-      email: formData.email,
-      role: 'candidate',
-      verified: false,
-      createdAt: new Date().toISOString()
-    };
-
-    localStorage.setItem('pendingUser', JSON.stringify(mockUser));
-    navigate('/verify-email');
+    setLoading(true);
+    try {
+      await registerCandidate(formData);
+      navigate('/verify-email');
+    } catch (err) {
+      setErrors({ form: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
+      <FormError message={errors.form} />
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
       <div>
         <InputField
@@ -323,10 +276,12 @@ const navigate = useNavigate();
         </div>
       )}
 
+      {/* Thanh độ mạnh (khi đang nhập) + dòng gợi ý luôn hiện bên dưới */}
+      <PasswordStrength password={formData.password} style={{ margin: '-8px 0 18px' }} />
       <p style={{
         fontSize: '12px',
         color: COLORS.gray,
-        margin: '-12px 0 20px 0',
+        margin: formData.password ? '-10px 0 20px 0' : '-12px 0 20px 0',
         lineHeight: '1.5'
       }}>
         Sử dụng ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt
@@ -401,26 +356,34 @@ const navigate = useNavigate();
           }}>
             Giới tính
           </label>
-          <select
-            value={formData.gender}
-            onChange={(e) => setFormData({...formData, gender: e.target.value})}
-            style={{
-              width: '100%',
-              padding: '12px 14px',
-              borderRadius: '8px',
-              border: `1px solid ${COLORS.border}`,
-              fontSize: '14px',
-              color: COLORS.navy,
-              outline: 'none',
-              boxSizing: 'border-box',
-              background: COLORS.white
-            }}
-          >
-            <option value="">Chọn giới tính</option>
-            <option value="male">Nam</option>
-            <option value="female">Nữ</option>
-            <option value="other">Khác</option>
-          </select>
+          {/* Ẩn mũi tên mặc định (sát mép, lệch), dùng icon riêng căn giữa theo chiều dọc */}
+          <div style={{ position: 'relative' }}>
+            <Users size={18} color={COLORS.gray} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <select
+              value={formData.gender}
+              onChange={(e) => setFormData({...formData, gender: e.target.value})}
+              style={{
+                width: '100%',
+                padding: '12px 42px 12px 44px',
+                borderRadius: '8px',
+                border: `1px solid ${COLORS.border}`,
+                fontSize: '14px',
+                color: formData.gender ? COLORS.navy : COLORS.grayLight,
+                outline: 'none',
+                boxSizing: 'border-box',
+                background: COLORS.white,
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="">Chọn giới tính</option>
+              <option value="male" style={{ color: COLORS.navy }}>Nam</option>
+              <option value="female" style={{ color: COLORS.navy }}>Nữ</option>
+              <option value="other" style={{ color: COLORS.navy }}>Khác</option>
+            </select>
+            <ChevronDown size={18} color={COLORS.gray} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+          </div>
           {errors.gender && (
             <div style={{ fontSize: '12px', color: COLORS.red, marginTop: '10px' }}>
               {errors.gender}
@@ -458,7 +421,7 @@ const navigate = useNavigate();
 
       <div style={{
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         gap: '12px',
         marginBottom: '24px'
       }}>
@@ -467,8 +430,9 @@ const navigate = useNavigate();
           checked={formData.agreed}
           onChange={(e) => setFormData({...formData, agreed: e.target.checked})}
           style={{
-            marginTop: '4px',
-            cursor: 'pointer'
+            // Cùng cỡ với checkbox ở bảng Tin tuyển dụng của nhà tuyển dụng
+            width: 18, height: 18, margin: 0, flexShrink: 0,
+            cursor: 'pointer', accentColor: COLORS.purple
           }}
         />
         <label style={{
@@ -494,21 +458,22 @@ const navigate = useNavigate();
 
       <button
         type="submit"
+        disabled={loading}
         style={{
           width: '100%',
           padding: '14px',
           borderRadius: '8px',
           border: 'none',
-          background: `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`,
+          background: COLORS.purple,
           color: COLORS.white,
           fontSize: '15px',
           fontWeight: '600',
           cursor: 'pointer',
           transition: 'all 0.2s',
-          boxShadow: '0 4px 12px rgba(139, 127, 214, 0.3)'
+          boxShadow: '0 6px 20px rgba(109, 93, 252, 0.28)'
         }}
       >
-        Tạo tài khoản
+        {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
       </button>
     </form>
   );
@@ -550,8 +515,8 @@ const navigate = useNavigate();
 
       if (!formData.password)
         newErrors.password = 'Vui lòng nhập mật khẩu';
-      else if (formData.password.length < 8)
-        newErrors.password = 'Mật khẩu tối thiểu 8 ký tự';
+      else if (firstFailedRule(formData.password))
+        newErrors.password = `Mật khẩu chưa đạt: ${firstFailedRule(formData.password).text.toLowerCase()}`;
 
       if (formData.confirmPassword !== formData.password)
         newErrors.confirmPassword = 'Mật khẩu không khớp';
@@ -577,23 +542,26 @@ const navigate = useNavigate();
       return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const mockUser = {
-      email: formData.email,
-      role: 'employer',
-      verified: false,
-      createdAt: new Date().toISOString()
-    };
-
-    localStorage.setItem('pendingUser', JSON.stringify(mockUser));
-    navigate('/verify-email');
+    setLoading(true);
+    try {
+      await registerEmployer(formData);
+      navigate('/verify-email');
+    } catch (err) {
+      setErrors({ form: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
+      <FormError message={errors.form} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
         <div>
           <InputField
@@ -660,10 +628,12 @@ const navigate = useNavigate();
         </div>
       )}
 
+      {/* Thanh độ mạnh (khi đang nhập) + dòng gợi ý luôn hiện bên dưới */}
+      <PasswordStrength password={formData.password} style={{ margin: '-8px 0 18px' }} />
       <p style={{
         fontSize: '12px',
         color: COLORS.gray,
-        margin: '-12px 0 20px 0',
+        margin: formData.password ? '-10px 0 20px 0' : '-12px 0 20px 0',
         lineHeight: '1.5'
       }}>
         Sử dụng ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt
@@ -744,7 +714,7 @@ const navigate = useNavigate();
 
       <div style={{
         display: 'flex',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         gap: '12px',
         marginBottom: '24px'
       }}>
@@ -753,8 +723,9 @@ const navigate = useNavigate();
           checked={formData.agreed}
           onChange={(e) => setFormData({...formData, agreed: e.target.checked})}
           style={{
-            marginTop: '4px',
-            cursor: 'pointer'
+            // Cùng cỡ với checkbox ở bảng Tin tuyển dụng của nhà tuyển dụng
+            width: 18, height: 18, margin: 0, flexShrink: 0,
+            cursor: 'pointer', accentColor: COLORS.purple
           }}
         />
         <label style={{
@@ -780,53 +751,35 @@ const navigate = useNavigate();
 
       <button
         type="submit"
+        disabled={loading}
         style={{
           width: '100%',
           padding: '14px',
           borderRadius: '8px',
           border: 'none',
-          background: `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`,
+          background: COLORS.purple,
           color: COLORS.white,
           fontSize: '15px',
           fontWeight: '600',
           cursor: 'pointer',
           transition: 'all 0.2s',
-          boxShadow: '0 4px 12px rgba(139, 127, 214, 0.3)'
+          boxShadow: '0 6px 20px rgba(109, 93, 252, 0.28)'
         }}
       >
-        Tạo tài khoản
+        {loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}
       </button>
     </form>
   );
 };
 
-const RegistrationPage = () => {
-  const [selectedRole, setSelectedRole] = useState('candidate');
+const Register = () => {
+  // ?role=employer (từ nút ở trang chủ) → chọn sẵn vai trò
+  const [searchParams] = useSearchParams();
+  const [selectedRole, setSelectedRole] = useState(() => {
+    const r = searchParams.get('role');
+    return ['candidate', 'employer'].includes(r) ? r : 'candidate';
+  });
 
-  const candidateFeatures = [
-    { icon: CheckCircle, text: '10.000+ việc làm part-time được xác thực' },
-    { icon: Shield, text: 'An toàn với hệ thống xác thực doanh nghiệp' },
-    { icon: Zap, text: 'Nhanh chóng ứng tuyển chỉ trong 30 giây' },
-    { icon: CreditCard, text: 'Miễn phí hoàn toàn cho ứng viên' }
-  ];
-
-  const employerFeatures = [
-    { icon: User, text: '50.000+ ứng viên sẵn sàng làm việc' },
-    { icon: Shield, text: 'Uy tín với hệ thống xác thực hồ sơ ứng viên' },
-    { icon: Zap, text: 'Nhanh chóng đăng tin tuyển dụng trong 5 phút' },
-    { icon: CreditCard, text: 'Hiệu quả tỷ lệ tìm được ứng viên phù hợp cao' }
-  ];
-
-  const features = selectedRole === 'candidate' ? candidateFeatures : employerFeatures;
-  const heroTitle = selectedRole === 'candidate' 
-    ? 'Với UNIJOB, tìm việc làm part-time trở nên dễ dàng hơn bao giờ hết'
-    : 'Tìm kiếm ứng viên chất lượng cho doanh nghiệp của bạn';
-  const heroSubtitle = selectedRole === 'candidate'
-    ? 'Nền tảng kết nối ứng viên với hàng ngàn cơ hội việc làm part-time uy tín tại Việt Nam.'
-    : 'Nền tảng tuyển dụng hàng đầu giúp doanh nghiệp kết nối với hàng ngàn ứng viên tiềm năng.';
-  const gradientColor = selectedRole === 'candidate' 
-    ? `linear-gradient(135deg, ${COLORS.purple} 0%, ${COLORS.purpleGradient} 100%)`
-    : `linear-gradient(135deg, ${COLORS.blue} 0%, ${COLORS.blueGradient} 100%)`;
 
   return (
     <div style={{
@@ -834,7 +787,7 @@ const RegistrationPage = () => {
       margin: 0,
       padding: 0,
       minHeight: '100vh',
-      background: COLORS.cream
+      background: COLORS.grayBg
     }}>
       
       <main style={{
@@ -842,56 +795,19 @@ const RegistrationPage = () => {
         minHeight: 'calc(100vh - 76px)',
         maxWidth: '1400px',
         margin: '0 auto',
-        padding: '40px 48px',
-        gap: '48px',
-        alignItems: 'center'
+        padding: '40px 48px 64px',
+        gap: '40px',
+        alignItems: 'flex-start'
       }}>
-        <div style={{
-          flex: '1',
-          background: gradientColor,
-          borderRadius: '24px',
-          padding: '60px',
-          color: COLORS.white,
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-          minHeight: '600px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center'
-        }}>
-          <h1 style={{
-            fontSize: '40px',
-            fontWeight: '700',
-            lineHeight: '1.3',
-            marginBottom: '20px',
-            letterSpacing: '-0.5px'
-          }}>
-            {heroTitle}
-          </h1>
-          
-          <p style={{
-            fontSize: '16px',
-            lineHeight: '1.6',
-            opacity: 0.95,
-            marginBottom: '48px'
-          }}>
-            {heroSubtitle}
-          </p>
-
-          <div>
-            {features.map((feature, idx) => (
-              <FeatureItem key={idx} {...feature} />
-            ))}
-          </div>
-        </div>
+        <AuthHero role={selectedRole} />
 
         <div style={{
           flex: '0 0 520px',
           background: COLORS.white,
           borderRadius: '20px',
           padding: '40px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-          maxHeight: 'calc(100vh - 156px)',
-          overflowY: 'auto'
+          border: `1px solid ${COLORS.border}`,
+          boxShadow: '0 12px 40px rgba(15, 23, 42, 0.06)'
         }}>
           <h2 style={{
             fontSize: '32px',
@@ -930,8 +846,7 @@ const RegistrationPage = () => {
             fontSize: '13px',
             color: COLORS.grayLight
           }}>
-            <div style={{ flex: 1, height: '1px', background: COLORS.border }} />
-            Hoặc đăng ký bằng email
+            {/* Chỉ còn đường kẻ phân cách, không chữ */}
             <div style={{ flex: 1, height: '1px', background: COLORS.border }} />
           </div>
 
@@ -942,4 +857,4 @@ const RegistrationPage = () => {
   );
 };
 
-export default RegistrationPage;
+export default Register;

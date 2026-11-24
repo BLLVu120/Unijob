@@ -2,6 +2,11 @@
   font-family: 'Inter', system-ui, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  color: #0f172a;
+  background: #f5f6fb;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 * {
@@ -12,8 +17,114 @@
 
 html, body, #root {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+}
+
+body {
+  overflow-x: clip;
+  background: #f5f6fb;
+}
+
+/* Font chữ đồng nhất cho mọi điều khiển */
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+button {
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease,
+    box-shadow .18s ease, transform .18s ease, opacity .18s ease, filter .18s ease;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(1.04);
+}
+
+button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input, select, textarea {
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #6d5dfc !important;
+  box-shadow: 0 0 0 3px rgba(109, 93, 252, 0.15);
+}
+
+input::placeholder, textarea::placeholder {
+  color: #a3acbd;
+}
+
+:focus-visible {
+  outline: 2px solid #6d5dfc;
+  outline-offset: 2px;
+}
+
+a {
+  color: #5443e8;
+}
+
+::selection {
+  background: rgba(109, 93, 252, 0.18);
+}
+
+/* Bảng: dòng sáng nhẹ khi rê chuột */
+tbody tr {
+  transition: background-color .15s ease;
+}
+
+tbody tr:hover {
+  background: #fafaff;
+}
+
+th {
+  letter-spacing: .04em;
+}
+
+/* Thanh cuộn mảnh */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d8e3;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b6bccb;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }

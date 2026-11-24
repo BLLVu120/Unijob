@@ -19,8 +19,8 @@ dist-ssr/
 # ── Log & dữ liệu runtime ─────────────────────────────────────
 logs/
 *.log
-BE/Backend/src/store/cv/*
-!BE/Backend/src/store/cv/.gitkeep
+BE/src/store/cv/*
+!BE/src/store/cv/.gitkeep
 
 # ── Editor / OS ───────────────────────────────────────────────
 .vscode/

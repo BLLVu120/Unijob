@@ -1,279 +1,259 @@
-import { apiRequest } from "../api/api";
-import { saveUser, getUser, mergeUser, logoutUserStorage } from "../utils/storage";
+import { apiRequest } from '../api/api';
+import { verifyTaxCode } from './verificationService';
 
-/* INTERNAL USERS (ADMIN / MODERATOR) */
+/*
+ * Phiên đăng nhập lưu trong localStorage["user"]:
+ *   { ...hồ sơ từ BE (không có password), id, name, role, roleName }
+ *
+ * Lưu ý: BE chưa có API đăng nhập, nên FE lấy hồ sơ theo email rồi so khớp
+ * mật khẩu. Mật khẩu KHÔNG bao giờ được lưu xuống trình duyệt.
+ */
 
-const internalUsers = [
-  {
-    email: "admin@gmail.com",
-    password: "123456",
-    role: "admin",
-    name: "Admin System"
-  },
-  {
-    email: "moderator@gmail.com",
-    password: "123456",
-    role: "moderator",
-    name: "Moderator"
+const USER_KEY = 'user';
+const PENDING_KEY = 'pendingUser';
+
+const ROLE_NAMES = {
+  candidate: 'Ứng viên',
+  employer: 'Nhà tuyển dụng'
+};
+
+const enc = encodeURIComponent;
+
+const stripPassword = (record) => {
+  if (!record) return record;
+  // eslint-disable-next-line no-unused-vars
+  const { password, ...rest } = record;
+  return rest;
+};
+
+export const toSessionUser = (record, role) => {
+  const clean = stripPassword(record);
+  return role === 'employer'
+    ? { ...clean, id: clean.emp_id, name: clean.emp_name, role, roleName: ROLE_NAMES.employer }
+    : { ...clean, id: clean.candidate_id, name: clean.full_name, role, roleName: ROLE_NAMES.candidate };
+};
+
+/* ─── Phiên đăng nhập ─────────────────────────────────────────── */
+
+export const getCurrentUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY));
+  } catch {
+    return null;
   }
-];
+};
 
-export const loginInternal = (email, password) => {
-  const user = internalUsers.find(u => u.email === email);
-
-  if (!user) throw new Error("Tài khoản nội bộ không tồn tại");
-  if (user.password !== password) throw new Error("Sai mật khẩu");
-
-  localStorage.setItem("internalUser", JSON.stringify(user));
+export const saveSession = (user) => {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
   return user;
 };
 
-export const getInternalUser = () => {
-  return JSON.parse(localStorage.getItem("internalUser"));
+export const logout = () => localStorage.removeItem(USER_KEY);
+
+/* ─── Đọc hồ sơ ───────────────────────────────────────────────── */
+
+const isFound = (record) => record && !Array.isArray(record) && record.email;
+
+// Trả về hồ sơ đầy đủ (kể cả password) hoặc null nếu không tồn tại
+const fetchCandidateByEmail = async (email) => {
+  const res = await apiRequest(`/v1/candidate/get_by_email?email=${enc(email)}`);
+  return isFound(res.candidate) ? res.candidate : null;
 };
 
-export const logoutInternal = () => {
-  localStorage.removeItem("internalUser");
-};
-
-/* CANDIDATE */
-
-export const registerUser = async (user) => {
+const fetchEmployerByEmail = async (email) => {
   try {
-    const data = await apiRequest("/v1/candidate/add", {
-      method: "POST",
-      body: JSON.stringify(user)
-    });
-
-    return data;
+    const res = await apiRequest(`/v1/employer/get_by_email?email=${enc(email)}`);
+    return isFound(res.employer) ? res.employer : null;
   } catch (err) {
-    if (err.message.includes("email")) {
-      throw new Error("Email đã tồn tại");
-    }
-
-    throw new Error(err.message || "Đăng ký thất bại");
+    // BE trả lỗi 500 khi không tìm thấy employer
+    if (err.message.startsWith('Không kết nối')) throw err;
+    return null;
   }
 };
 
-export const verifyEmail = async (code) => {
-  if (!code) throw new Error("Mã xác nhận không đúng");
-  if (code !== "123456") throw new Error("Mã xác nhận không đúng");
+const fetchByRole = (role, email) =>
+  role === 'employer' ? fetchEmployerByEmail(email) : fetchCandidateByEmail(email);
 
-  const pendingUser = getPendingUser();
-  if (!pendingUser) throw new Error("Không tìm thấy thông tin đăng ký");
-
-  try {
-    const isEmployer = !!pendingUser.emp_name;
-    const endpoint = isEmployer
-      ? `/v1/employer/get_by_email?email=${pendingUser.email}`
-      : `/v1/candidate/get_by_email?email=${pendingUser.email}`;
-    const res = await apiRequest(endpoint);
-    const user = isEmployer ? res.employer : res.candidate;
-
-    if (!user) throw new Error("Không tìm thấy tài khoản");
-
-    const updatedUser = {
-      ...user,
-      is_verified: true
-    };
-
-    const updateEndpoint = isEmployer ? "/v1/employer/update_info" : "/v1/candidate/update_info";
-    await apiRequest(updateEndpoint, {
-      method: "POST",
-      body: JSON.stringify(updatedUser)
-    });
-
-    clearPendingUser();
-
-    return {
-      success: true,
-      email: user.email
-    };
-
-  } catch (err) {
-    throw new Error(err.message || "Xác thực thất bại");
-  }
-};
-
-export const loginUser = async (email, password) => {
-  const res = await apiRequest(`/v1/candidate/get_by_email?email=${email}`);
-  const candidate = res.candidate;
-
-  if (!candidate?.email) throw new Error("Tài khoản không tồn tại");
-  if (candidate.is_verified === false) throw new Error("Tài khoản chưa xác thực email");
-  if (candidate.password !== password) throw new Error("Sai mật khẩu");
-
-  const userData = {
-    ...candidate,
-    role: "candidate",
-    lastLogin: new Date().toISOString()
-  };
-
-  saveUser(userData);
-  return userData;
-};
-
-export const getProfile = async (email) => {
-  const res = await apiRequest(`/v1/candidate/get_by_email?email=${email}`);
-  const candidate = res.candidate;
-
-  const userData = {
-    ...candidate,
-    role: "candidate"
-  };
-
-  saveUser(userData);
-  return userData;
-};
-
-export const getUserById = async (id) => {
-  const res = await apiRequest(`/v1/candidate/get_by_id?id=${id}`);
-  return res.candidate;
-};
-
-export const updateUser = async (userData) => {
-  await apiRequest("/v1/candidate/update_info", {
-    method: "POST",
-    body: JSON.stringify(userData)
-  });
-
-  const res = await apiRequest(`/v1/candidate/get_by_email?email=${userData.email}`);
-  const candidate = res.candidate;
-
-  return mergeUser({
-    ...candidate,
-    role: "candidate"
-  });
-};
-
-export const deleteUser = async (id) => {
-  await apiRequest(`/v1/candidate/delete?id=${id}`, {
-    method: "DELETE"
-  });
-
-  localStorage.removeItem("user");
-};
-
-export const getCurrentUser = getUser;
-
-export const setCurrentUser = (user) => {
-  const current = JSON.parse(localStorage.getItem("user")) || {};
-  const merged = {
-    ...current,
-    ...user
-  };
-
-  localStorage.setItem("user", JSON.stringify(merged));
-};
-
-export const logoutUser = logoutUserStorage;
-
-/* EMPLOYER */
-
-export const registerEmployer = async (employer) => {
-  try {
-    const data = await apiRequest("/v1/employer/add", {
-      method: "POST",
-      body: JSON.stringify(employer)
-    });
-
-    return data;
-
-  } catch (err) {
-    if (err.message.includes("email")) {
-      throw new Error("Email đã tồn tại");
-    }
-
-    throw new Error(err.message || "Đăng ký thất bại");
-  }
-};
-
-export const loginEmployer = async (email, password) => {
-  const res = await apiRequest(`/v1/employer/get_by_email?email=${email}`);
-  const employer = res.employer;
-
-  if (!employer?.email) throw new Error("Tài khoản không tồn tại");
-  if (employer.password !== password) throw new Error("Sai mật khẩu");
-
-  const employerData = {
-    ...employer,
-    role: "employer",
-    lastLogin: new Date().toISOString()
-  };
-
-  saveUser(employerData);
-  return employerData;
-};
-
-export const getEmployerProfile = async (email) => {
-  const res = await apiRequest(`/v1/employer/get_by_email?email=${email}`);
-  const employer = res.employer;
-
-  const employerData = {
-    ...employer,
-    role: "employer"
-  };
-
-  saveUser(employerData);
-  return employerData;
+export const getCandidateById = async (id) => {
+  const res = await apiRequest(`/v1/candidate/get_by_id?id=${enc(id)}`);
+  return isFound(res.candidate) ? stripPassword(res.candidate) : null;
 };
 
 export const getEmployerById = async (id) => {
-  const res = await apiRequest(`/v1/employer/get_by_id?id=${id}`);
-  return res.employer;
-};
-
-export const updateEmployer = async (employerData) => {
-  await apiRequest("/v1/employer/update_info", {
-    method: "POST",
-    body: JSON.stringify(employerData)
-  });
-
-  const res = await apiRequest(`/v1/employer/get_by_email?email=${employerData.email}`);
-  const employer = res.employer;
-
-  return mergeUser({
-    ...employer,
-    role: "employer"
-  });
+  try {
+    const res = await apiRequest(`/v1/employer/get_by_id?id=${enc(id)}`);
+    return isFound(res.employer) ? stripPassword(res.employer) : null;
+  } catch {
+    return null;
+  }
 };
 
 export const getAllEmployers = async () => {
-  const res = await apiRequest("/v1/admin/get_all_employers");
-  return res.employers || [];
+  const res = await apiRequest('/v1/admin/get_all_employers');
+  return (res.employers || []).map(stripPassword);
 };
 
-export const getCurrentEmployer = () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  return user?.role === "employer" ? user : null;
+// Admin duyệt / hủy xác thực doanh nghiệp
+export const setEmployerVerified = (email, verified) =>
+  apiRequest('/v1/employer/update_info', {
+    method: 'POST',
+    body: JSON.stringify({ email, is_verified: verified })
+  });
+
+// BE xóa ứng viên theo email
+export const deleteCandidate = (email) =>
+  apiRequest(`/v1/candidate/delete?email=${enc(email)}`, { method: 'DELETE' });
+
+export const getAllCandidates = async () => {
+  const res = await apiRequest('/v1/admin/get_all_candidates');
+  return (res.candidates || []).map(stripPassword);
 };
 
-export const setCurrentEmployer = (employer) => {
-  localStorage.setItem("employer", JSON.stringify(employer));
+/* ─── Đăng ký ─────────────────────────────────────────────────── */
+
+const friendlyRegisterError = (err) => {
+  const msg = err.message || '';
+  if (/duplicate|unique/i.test(msg)) {
+    if (/email/i.test(msg)) return new Error('Email đã được sử dụng');
+    if (/phone/i.test(msg)) return new Error('Số điện thoại đã được sử dụng');
+    return new Error('Thông tin đã tồn tại trong hệ thống');
+  }
+  return new Error(msg || 'Đăng ký thất bại');
 };
 
-export const logoutEmployer = logoutUserStorage;
-
-/* EMAIL VERIFY (MOCK) */
-
-export const setPendingUser = (user) => {
-  localStorage.setItem("pendingUser", JSON.stringify(user));
+export const registerCandidate = async (form) => {
+  try {
+    await apiRequest('/v1/candidate/add', {
+      method: 'POST',
+      body: JSON.stringify({
+        full_name: form.fullName.trim(),
+        dob: form.birthDate,
+        gender: form.gender,
+        email: form.email.trim(),
+        password: form.password,
+        phone_number: form.phone.trim(),
+        address: form.address.trim(),
+        cid: form.IdCard.trim()
+      })
+    });
+  } catch (err) {
+    throw friendlyRegisterError(err);
+  }
+  setPendingUser({ email: form.email.trim(), role: 'candidate', name: form.fullName.trim() });
 };
+
+export const registerEmployer = async (form) => {
+  // Kiểm tra mã số thuế trước khi tạo tài khoản
+  const taxCode = form.taxRegistrationNumber.trim();
+  const tax = await verifyTaxCode(taxCode);
+  if (!tax?.is_valid) {
+    throw new Error(tax?.error || 'Mã số thuế không hợp lệ');
+  }
+
+  try {
+    await apiRequest('/v1/employer/add', {
+      method: 'POST',
+      body: JSON.stringify({
+        emp_name: form.companyName.trim(),
+        representative_name: form.fullName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        phone_number: form.phone.trim(),
+        address: form.address.trim(),
+        tax_code: form.taxRegistrationNumber.trim(),
+        cid: form.IdCard.trim(),
+        is_verified: false
+      })
+    });
+  } catch (err) {
+    throw friendlyRegisterError(err);
+  }
+  setPendingUser({ email: form.email.trim(), role: 'employer', name: form.companyName.trim() });
+};
+
+/* ─── Xác thực email bằng OTP ─────────────────────────────────── */
+
+export const setPendingUser = (user) => localStorage.setItem(PENDING_KEY, JSON.stringify(user));
 
 export const getPendingUser = () => {
-  return JSON.parse(localStorage.getItem("pendingUser"));
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_KEY));
+  } catch {
+    return null;
+  }
 };
 
-export const clearPendingUser = () => {
-  localStorage.removeItem("pendingUser");
+export const clearPendingUser = () => localStorage.removeItem(PENDING_KEY);
+
+export const sendOtp = (email) =>
+  apiRequest('/v1/verification/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+
+const markVerified = (role, email) =>
+  apiRequest(role === 'employer' ? '/v1/employer/update_info' : '/v1/candidate/update_info', {
+    method: 'POST',
+    body: JSON.stringify({ email, is_verified: true })
+  });
+
+// Kiểm tra OTP rồi đánh dấu tài khoản đã xác thực (BE verify-otp chưa tự làm việc này)
+export const verifyOtp = async ({ email, role }, otp) => {
+  await apiRequest('/v1/verification/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp })
+  });
+  await markVerified(role, email);
 };
 
-/* ADMIN USER MANAGEMENT (MOCK) */
+/* ─── Đăng nhập ───────────────────────────────────────────────── */
 
-export const getUsers = () => {
-  return JSON.parse(localStorage.getItem("users") || "[]");
+export class UnverifiedAccountError extends Error {}
+
+export const login = async (role, email, password) => {
+  const record = await fetchByRole(role, email.trim());
+
+  if (!record || record.password !== password) {
+    throw new Error('Sai email hoặc mật khẩu');
+  }
+
+  if (role === 'candidate' && !record.is_verified) {
+    setPendingUser({ email: record.email, role, name: record.full_name });
+    throw new UnverifiedAccountError('Tài khoản chưa xác thực email');
+  }
+
+  return saveSession(toSessionUser(record, role));
 };
 
-export const saveUsers = (users) => {
-  localStorage.setItem("users", JSON.stringify(users));
+/* ─── Cập nhật hồ sơ ──────────────────────────────────────────── */
+
+// Tải lại hồ sơ từ BE và cập nhật phiên
+export const refreshSession = async () => {
+  const current = getCurrentUser();
+  if (!current) return null;
+  const record = await fetchByRole(current.role, current.email);
+  if (!record) return current;
+  return saveSession({ ...current, ...toSessionUser(record, current.role) });
+};
+
+// BE đặt is_verified = false nếu không gửi kèm, nên luôn gửi giá trị hiện tại
+const updateProfile = async (role, fields) => {
+  const current = getCurrentUser();
+  await apiRequest(role === 'employer' ? '/v1/employer/update_info' : '/v1/candidate/update_info', {
+    method: 'POST',
+    body: JSON.stringify({ ...fields, email: current.email, is_verified: !!current.is_verified })
+  });
+  return refreshSession();
+};
+
+export const updateCandidateProfile = (fields) => updateProfile('candidate', fields);
+export const updateEmployerProfile = (fields) => updateProfile('employer', fields);
+
+export const changePassword = async (currentPassword, newPassword) => {
+  const current = getCurrentUser();
+  const record = await fetchByRole(current.role, current.email);
+  if (!record || record.password !== currentPassword) {
+    throw new Error('Mật khẩu hiện tại không đúng');
+  }
+  await updateProfile(current.role, { password: newPassword });
 };

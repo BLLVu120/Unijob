@@ -1,4 +1,4 @@
-import Navbar from "../components/Navbar";
+import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Outlet } from 'react-router-dom';
 
@@ -7,7 +7,7 @@ export default function MainLayout({ user, onLogout }) {
     <>
       <Navbar
         isLoggedIn={!!user}
-        isEmployer={user?.role === "employer"}
+        isEmployer={user?.role === 'employer'}
         userData={user}
         onLogout={onLogout}
       />
